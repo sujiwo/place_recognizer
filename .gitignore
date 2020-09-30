@@ -1,0 +1,4 @@
+*.autosave
+*.pyc
+*.swp
+.ipynb_checkpoints/
