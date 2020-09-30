@@ -24,6 +24,14 @@ if (OPENMP_FOUND)
 	set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
+if(SEGNET_DIR)
+	message("SegNet is set")
+	include("${SEGNET_DIR}/share/Caffe/CaffeConfig.cmake")
+	message("SegNet include: " "${Caffe_INCLUDE_DIRS}")
+	set(SEGNET_FOUND true)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_CUDNN -DUSE_LEVELDB -DUSE_LMDB -DUSE_OPENCV -DSEGNET_FOUND=1")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${SEGNET_DIR}/lib")
+endif()
 
 add_service_files(
 	FILES
