@@ -131,8 +131,9 @@ void run()
 		}
 
 		publishToRos(frameImg, kpList);
-		cout << mId << "/" << imageBag->size() << endl;
+		cout << mId << "/" << imageBag->size() << "\r" << flush;
 	}
+	cout << endl;
 
 	cout << "Saving to " << mapOutputPath.string() << "... ";
 	mapperProc.saveToDisk(mapOutputPath.string());
