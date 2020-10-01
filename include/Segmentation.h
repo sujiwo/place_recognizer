@@ -3,6 +3,8 @@
  *
  *  Created on: Feb 22, 2020
  *      Author: sujiwo
+ *
+ * The objective is to create a mask at which no image features will not fall upon that areas
  */
 
 #ifndef PLACE_RECOGNIZER_SEGMENTATION_H_

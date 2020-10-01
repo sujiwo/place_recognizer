@@ -3,14 +3,17 @@
  */
 
 #include <string>
+#include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include <cv_bridge/cv_bridge.h>
+#include <image_transport/image_transport.h>
 #include <opencv2/features2d.hpp>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include "IncrementalBoW.h"
 #include "ProgramOptionParser.h"
 #include "ImageBag.h"
+#include "Segmentation.h"
 #include "npy.hpp"
 
 
@@ -56,17 +59,69 @@ IBoW_Mapper_App(int argc, char *argv[])
 		//
 	}
 	else mapOutputPath = Path(_mapOutputPath);
+
+	ros::init(argc, argv, "bow_mapper");
+	ros::Time::init();
+	rosEnabled = ros::master::check();
+	if (rosEnabled) {
+		cout << "ROS connector enabled" << endl;
+		hdl.reset(new ros::NodeHandle);
+		imageTransport.reset(new image_transport::ImageTransport(*hdl));
+		keyptPublisher = imageTransport->advertise("bow_mapper_image", 10);
+	}
+
+#ifdef SEGNET_FOUND
+	auto segnetModel = options.get<string>("segnet-model", ""),
+		segnetWeight = options.get<string>("segnet-weight", "");
+	if (segnetModel.empty()==false and segnetWeight.empty()==false) {
+		gSegment.reset(new PlaceRecognizer::Segmentation(segnetModel, segnetWeight));
+		cout << "SegNet is used" << endl;
+	}
+#endif
+
 	return;
 }
+
+
+~IBoW_Mapper_App()
+{
+	imageTransport.reset();
+	hdl->shutdown();
+}
+
+
+void publishToRos(const cv::Mat &image, const std::vector<cv::KeyPoint> &keypoints)
+{
+	if (rosEnabled==false)
+		return;
+
+	cv::Mat drawKpts;
+	cv::drawKeypoints(image, keypoints, drawKpts, cv::Scalar(0,255,0));
+
+	cv_bridge::CvImage cvImg;
+	cvImg.encoding = sensor_msgs::image_encodings::BGR8;
+	cvImg.image = drawKpts;
+	cvImg.header.stamp = ros::Time::now();
+	keyptPublisher.publish(*cvImg.toImageMsg());
+}
+
 
 void run()
 {
 	for (auto mId: messageList) {
 		auto frameImg = imageBag->at(mId);
 
+		cv::Mat mask;
+#ifdef SEGNET_FOUND
+		if (gSegment!=nullptr) {
+			mask = gSegment->buildMask(frameImg);
+			cv::resize(mask, mask, frameImg.size(), 0, 0, cv::INTER_NEAREST);
+		}
+#endif
+
 		std::vector<cv::KeyPoint> kpList;
 		cv::Mat descriptors;
-		featureDetector->detectAndCompute(frameImg, cv::Mat(), kpList, descriptors, false);
+		featureDetector->detectAndCompute(frameImg, mask, kpList, descriptors, false);
 
 		if (mId==messageList.front()) {
 			mapperProc.addImage(mId, kpList, descriptors);
@@ -75,6 +130,7 @@ void run()
 			mapperProc.addImage2(mId, kpList, descriptors);
 		}
 
+		publishToRos(frameImg, kpList);
 		cout << mId << "/" << imageBag->size() << endl;
 	}
 
@@ -105,6 +161,11 @@ prepare_options()
 		<decltype(IBoW_Mapper_App::startTimeSeconds)>
 		("stop-time", "Maximum seconds from start");
 	opts.addSimpleOptions("mapfile", "Map file output path");
+
+#ifdef SEGNET_FOUND
+	opts.addSimpleOptions("segnet-model", "Path to SegNet model file");
+	opts.addSimpleOptions("segnet-weight", "Path to SegNet weight file");
+#endif
 	return opts;
 }
 
@@ -115,11 +176,22 @@ private:
 	string outputMapFilename;
 	RandomAccessBag::DesampledMessageList messageList;
 	bool isCompressedImage=false;
+
+#ifdef SEGNET_FOUND
+	std::shared_ptr<PlaceRecognizer::Segmentation> gSegment=nullptr;
+#endif
+
 	PlaceRecognizer::IncrementalBoW mapperProc;
 
 	// Time constraint for bag
 	float startTimeSeconds=0,
 		maxSecondsFromStart=-1;
+
+	// ROS Part
+	bool rosEnabled = false;
+	std::shared_ptr<ros::NodeHandle> hdl=nullptr;
+	std::shared_ptr<image_transport::ImageTransport> imageTransport=nullptr;
+	image_transport::Publisher keyptPublisher;
 
 	Path mapOutputPath;
 };

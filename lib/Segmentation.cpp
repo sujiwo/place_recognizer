@@ -7,7 +7,6 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
-#include "vmml/utilities.h"
 #include "Segmentation.h"
 
 
