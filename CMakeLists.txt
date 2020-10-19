@@ -63,18 +63,12 @@ add_library(
 	place_recognizer
 		lib/IncrementalBoW.cpp
 )
-
 target_link_libraries(
 	place_recognizer
 		${OpenCV_LIBS}
 		${catkin_LIBRARIES}
 		Boost::serialization
 		Boost::system
-)
-
-install(
-	TARGETS place_recognizer
-	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
 
 add_executable(recognizer_srv
@@ -85,9 +79,12 @@ target_link_libraries(
 		Boost::system
 		Boost::program_options
 		${catkin_LIBRARIES})
+
 install(
-	TARGETS recognizer_srv
-		RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+	TARGETS place_recognizer recognizer_srv
+		LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+		RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION} )
+
 
 if(rosbag_viewer_FOUND)
 	message(STATUS "rosbag_viewer found; will compile mapper executables")

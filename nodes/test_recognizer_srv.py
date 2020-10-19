@@ -9,7 +9,7 @@ import cv2
 from copy import copy
 import numpy as np
 from cv_bridge import CvBridge, CvBridgeError
-from vision_mapper.srv import place_recognizer
+from place_recognizer.srv import place_recognizer
 
 bridge = CvBridge()
 
