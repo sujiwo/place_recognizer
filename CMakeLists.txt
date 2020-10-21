@@ -18,6 +18,8 @@ find_package (Boost REQUIRED COMPONENTS system serialization filesystem program_
 find_package (OpenCV REQUIRED)
 find_package (OpenMP REQUIRED)
 
+find_package (PythonLibs REQUIRED)
+
 if (OPENMP_FOUND)
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -70,6 +72,26 @@ target_link_libraries(
 		Boost::serialization
 		Boost::system
 )
+
+# Python extension
+add_library(py_place_recognition SHARED
+	python/binding.cpp
+	python/conversion.cpp
+	)
+target_include_directories( py_place_recognition
+	PUBLIC
+		include
+		${PYTHON_INCLUDE_DIRS})
+target_link_libraries( py_place_recognition
+	place_recognizer
+	${OpenCV_LIBS} )
+set_target_properties(py_place_recognition
+	PROPERTIES
+		LIBRARY_OUTPUT_NAME place_recognizer.so
+		PREFIX ""
+		SUFFIX "" )
+install(TARGETS py_place_recognition
+	LIBRARY DESTINATION ${CATKIN_GLOBAL_PYTHON_DESTINATION} )
 
 add_executable(recognizer_srv
 	nodes/recognizer_srv.cpp)
