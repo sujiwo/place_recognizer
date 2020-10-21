@@ -14,6 +14,10 @@
 #include "ProgramOptionParser.h"
 #include "place_recognizer/place_recognizer.h"
 
+#ifdef SEGNET_FOUND
+#include "Segmentation.h"
+#endif
+
 
 using namespace std;
 
@@ -35,6 +39,16 @@ RecognizerService(ros::NodeHandle &node, PrgOpt::ProgramOption &opt)
 			10);
 	imagedb.loadFromDisk(opt.get<string>("mapfile", ""));
 	placeRecognSrv = node.advertiseService("place_recognizer", &RecognizerService::service, this);
+
+#ifdef SEGNET_FOUND
+	auto segnetModel = opt.get<string>("segnet-model", ""),
+		segnetWeight = opt.get<string>("segnet-weight", "");
+	if (segnetModel.empty()==false and segnetWeight.empty()==false) {
+		gSegment.reset(new PlaceRecognizer::Segmentation(segnetModel, segnetWeight));
+		cout << "SegNet is used" << endl;
+	}
+#endif
+
 	cout << "Ready\n";
 }
 
@@ -73,6 +87,12 @@ prepare_options()
 	PrgOpt::ProgramOption opts;
 	opts.addSimpleOptions("mapfile", "Map file input path");
 	opts.addSimpleOptions<int>("numfeats", "Number of features from single image");
+
+#ifdef SEGNET_FOUND
+	opts.addSimpleOptions("segnet-model", "Path to SegNet model file");
+	opts.addSimpleOptions("segnet-weight", "Path to SegNet weight file");
+#endif
+
 	return opts;
 }
 
@@ -80,6 +100,11 @@ private:
 	PlaceRecognizer::IncrementalBoW imagedb;
 	ros::ServiceServer placeRecognSrv;
 	cv::Ptr<cv::FeatureDetector> binFeats;
+
+#ifdef SEGNET_FOUND
+	std::shared_ptr<PlaceRecognizer::Segmentation> gSegment=nullptr;
+#endif
+
 };
 
 

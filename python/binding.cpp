@@ -7,7 +7,21 @@
 
 #include <iostream>
 #include <Python.h>
+#include <structmember.h>
 #include "IncrementalBoW.h"
+
+
+/*
+ * Documentation: https://docs.python.org/2.7/extending/newtypes.html
+ */
+
+struct {
+	PyObject_HEAD
+} place_recognizer_ImageDb;
+
+static PyTypeObject ImageDbObj = {
+
+};
 
 
 static PyMethodDef place_recognizer_Methods[] = {

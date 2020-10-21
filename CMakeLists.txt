@@ -93,14 +93,20 @@ set_target_properties(py_place_recognition
 install(TARGETS py_place_recognition
 	LIBRARY DESTINATION ${CATKIN_GLOBAL_PYTHON_DESTINATION} )
 
-add_executable(recognizer_srv
-	nodes/recognizer_srv.cpp)
-target_link_libraries(
+add_executable( recognizer_srv
+	nodes/recognizer_srv.cpp
+	${SEGNET_WRAPPER} )
+target_link_libraries( recognizer_srv
+	place_recognizer
+	Boost::system
+	Boost::program_options
+	${catkin_LIBRARIES}
+	${Caffe_LIBRARIES} )
+target_include_directories(
 	recognizer_srv
-		place_recognizer
-		Boost::system
-		Boost::program_options
-		${catkin_LIBRARIES})
+		PUBLIC
+			${Caffe_INCLUDE_DIRS}
+	)
 
 install(
 	TARGETS place_recognizer recognizer_srv

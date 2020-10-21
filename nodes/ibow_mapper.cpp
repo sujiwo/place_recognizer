@@ -13,7 +13,11 @@
 #include "IncrementalBoW.h"
 #include "ProgramOptionParser.h"
 #include "ImageBag.h"
+
+#ifdef SEGNET_FOUND
 #include "Segmentation.h"
+#endif
+
 #include "npy.hpp"
 
 
