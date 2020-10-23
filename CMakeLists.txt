@@ -87,11 +87,13 @@ target_link_libraries( py_place_recognition
 	${OpenCV_LIBS} )
 set_target_properties(py_place_recognition
 	PROPERTIES
-		LIBRARY_OUTPUT_NAME place_recognizer.so
+		LIBRARY_OUTPUT_NAME _place_recognizer.so
 		PREFIX ""
 		SUFFIX "" )
 install(TARGETS py_place_recognition
-	LIBRARY DESTINATION ${CATKIN_GLOBAL_PYTHON_DESTINATION} )
+	LIBRARY DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION} )
+install(FILES python/__init__.py
+	DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION} )
 
 add_executable( recognizer_srv
 	nodes/recognizer_srv.cpp

@@ -139,7 +139,7 @@ init_place_recognizer(void)
 	if (PyType_Ready(&iBoWDB_Type) < 0)
 		return;
 
-	m = Py_InitModule3("place_recognizer", place_recognizer_Methods, "Place recognition based on image");
+	m = Py_InitModule3("_place_recognizer", place_recognizer_Methods, "Place recognition based on image");
 	if (m==NULL)
 		return;
 

@@ -1,6 +1,7 @@
-# ifndef __COVERSION_OPENCV_H__
-# define __COVERSION_OPENCV_H__
+# ifndef __CONVERSION_OPENCV_H__
+# define __CONVERSION_OPENCV_H__
 
+#include <vector>
 #include <Python.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -58,5 +59,28 @@ public:
     cv::Mat toMat(const PyObject* o);
     PyObject* toNDArray(const cv::Mat& mat);
 };
+
+
+struct ArgInfo
+{
+	const char * name;
+	bool outputarg;
+	// more fields may be added if necessary
+
+	ArgInfo(const char * name_, bool outputarg_)
+	: name(name_)
+	, outputarg(outputarg_) {}
+
+	// to match with older pyopencv_to function signature
+	operator const char *() const { return name; }
+};
+
+template<typename T> static
+bool pyopencv_to(PyObject* obj, T& p, const char* name = "<unknown>");
+
+template<typename T> static
+PyObject* pyopencv_from(const T& src);
+
+
 
 # endif
