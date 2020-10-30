@@ -5,10 +5,26 @@ import mlcrate as mlc
 import numpy as np
 
 
+class VisualDictionary():
+    def __init__ (self, numWords=64, numFeaturesOnImage=3000):
+        self.numWords = numWords
+        self.featureDetector = cv2.ORB_create(numFeaturesOnImage)
+        
+    def train(self, descriptors):
+        pass
+    
+    def build(self):
+        pass
+    
+    def predict(self, descriptors):
+        pass
+
+
 class VLAD():
     def __init__ (self, numFeatures=3000):
         self.numFeatures = numFeatures
         self.orb = cv2.ORB_create(numFeatures)
+        self.dictionary = None
         pass
     
     def loadDictionary(self, dictPath):
@@ -68,6 +84,10 @@ class VLAD():
 
     def save(self, path):
         return mlc.save(self, path)
+    
+    @staticmethod
+    def load(path):
+        pass
     
     
 if __name__=='__main__':
