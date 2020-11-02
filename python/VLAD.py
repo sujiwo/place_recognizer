@@ -9,14 +9,25 @@ class VisualDictionary():
     def __init__ (self, numWords=64, numFeaturesOnImage=3000):
         self.numWords = numWords
         self.featureDetector = cv2.ORB_create(numFeaturesOnImage)
+        self.descriptors = []
         
-    def train(self, descriptors):
-        pass
+    def train(self, image):
+        keypts, descrs = self.featureDetector.detectAndCompute(image, None)
+        self.descriptors.append(descrs)
     
     def build(self):
-        pass
+        self.descriptors = np.array(descriptors).astype(np.float32)
+        criteria = (cv2.TERM_CRITERIA_EPS|cv2.TERM_CRITERIA_MAX_ITER, 10, 0.1)
+        compactness, self.bestLabels, self.centers = cv2.kmeans(self.descriptors, self.numWords, None, criteria)
     
     def predict(self, descriptors):
+        pass
+    
+    def save(self, path):
+        pass
+    
+    @staticmethod
+    def load(path):
         pass
 
 
