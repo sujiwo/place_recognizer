@@ -53,9 +53,10 @@ class VisualDictionary():
     @staticmethod
     def load(path):
         fd = open(path, "rb")
-        numWords = pickle.load(fd)
-        numFeatures = pickle.load(fd)
         vd = VisualDictionary()
+        vd.numWords = pickle.load(fd)
+        vd.numFeatures = pickle.load(fd)
+        vd.featureDetector = cv2.ORB_create(vd.numFeatures)
         vd.descriptors = pickle.load(fd)
         vd.bestLabels = pickle.load(fd)
         vd.cluster_centers = pickle.load(fd)
@@ -70,7 +71,7 @@ class VLAD():
         pass
     
     def loadDictionary(self, dictPath):
-        self.dictionary = mlc.load(dictPath)
+        self.dictionary = VisualDictionary.load(dictPath)
         
     def initTrain(self, leafSize=40):
         self.datasetDescriptors = []
@@ -95,8 +96,8 @@ class VLAD():
         
     def computeVlad(self, descriptors):
         predictedLabels = self.dictionary.predict(descriptors)
-        centers = self.dictionary.cluster_centers_
-        k=self.dictionary.n_clusters
+        centers = self.dictionary.cluster_centers
+        k=self.dictionary.cluster_centers.shape[0]
         m,d = descriptors.shape
         V=np.zeros([k,d])
 
@@ -131,4 +132,9 @@ class VLAD():
     def load(path):
         pass
     
+if __name__ == '__main__':
+    vd = VLAD()
+    vd.loadDictionary("/tmp/test_visual_dict.dat")
     
+    pass
+
