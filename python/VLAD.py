@@ -5,6 +5,7 @@ import mlcrate as mlc
 import pickle
 import numpy as np
 import itertools
+from zmq.backend.cython.constants import FD
 
 
 class VisualDictionary():
@@ -27,11 +28,13 @@ class VisualDictionary():
     
     # Outputs the index of nearest center using single feature
     def predict1row(self, descriptors):
-        dist = []
-        for ci in range(len(self.cluster_centers)):
-            c = self.cluster_centers[ci]
-            d = np.linalg.norm(c - descriptors.astype(np.float32))
-            dist.append(d)
+        assert(descriptors.shape[0]==self.cluster_centers.shape[1])
+#         dist = []
+#         for ci in range(len(self.cluster_centers)):
+#             c = self.cluster_centers[ci]
+#             d = np.linalg.norm(c - descriptors.astype(np.float32))
+#             dist.append(d)
+        dist = np.linalg.norm(self.cluster_centers - descriptors.astype(np.float32), axis=1)
         return np.argmin(dist)
     
     def predict(self, X):
@@ -126,11 +129,23 @@ class VLAD():
         return res
 
     def save(self, path):
-        return mlc.save(self, path)
+        fd = open(path, "wb")
+        pickle.dump(self.numFeatures, fd)
+        pickle.dump(self.leafSize, fd)
+        pickle.dump(self.tree, fd)
+        pickle.dump(self.imageIds, fd)
+        fd.close()
     
     @staticmethod
     def load(path):
-        pass
+        vld = VLAD()
+        fd = open(path, "rb")
+        vld.numFeatures = pickle.load(fd)
+        vld.leafSize = pickle.load(fd)
+        vld.tree = pickle.load(fd)
+        vld.imageIds = pickle.load(fd)
+        fd.close()
+        return vld
     
 if __name__ == '__main__':
     vd = VLAD()
