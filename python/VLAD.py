@@ -5,8 +5,9 @@ import mlcrate as mlc
 import pickle
 import numpy as np
 import itertools
-from zmq.backend.cython.constants import FD
 
+
+# XXX: Check VLfeat source code
 
 class VisualDictionary():
     def __init__ (self, numWords=64, numFeaturesOnImage=3000):
