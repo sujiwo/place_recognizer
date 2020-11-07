@@ -5,6 +5,7 @@ import mlcrate as mlc
 import pickle
 import numpy as np
 import itertools
+from numpy import dtype
 
 
 # XXX: Check VLfeat source code
@@ -85,7 +86,7 @@ class VLAD():
     # train() produces VLAD descriptor of an input image
     def train(self, imageId, image, mask=None):
         keypoints, descriptors = self.orb.detectAndCompute(image, mask)
-        V = self.computeVlad(descriptors)
+        V = self.computeVlad2(descriptors)
         self.imageIds.append(imageId)
         self.datasetDescriptors.append(V)
         
@@ -97,8 +98,7 @@ class VLAD():
         self.tree = BallTree(self.descriptors, leaf_size=self.leafSize)
         print("Done training")
         
-        
-    def computeVlad(self, descriptors):
+    def computeVlad(self, descriptors, raw=False):
         predictedLabels = self.dictionary.predict(descriptors)
         centers = self.dictionary.cluster_centers
         k=self.dictionary.cluster_centers.shape[0]
@@ -113,6 +113,9 @@ class VLAD():
                 # add the diferences
                 V[i]=np.sum(descriptors[predictedLabels==i,:]-centers[i],axis=0)
         
+        if (raw==True):
+            return V
+        
         V = V.flatten()
         # power normalization, also called square-rooting normalization
         V = np.sign(V)*np.sqrt(np.abs(V))
@@ -121,6 +124,26 @@ class VLAD():
         V = V/np.sqrt(np.dot(V,V))
         return V
     
+    def computeVlad2(self, descriptors):
+        predictedLabels = self.dictionary.predict(descriptors)
+        centers = self.dictionary.cluster_centers
+        k=self.dictionary.cluster_centers.shape[0]
+        m,d = descriptors.shape
+        V=np.zeros([k,d])
+
+        #computing the differences
+        # for all the clusters (visual words)
+        for i in range(k):
+            # if there is at least one descriptor in that cluster
+            if np.sum(predictedLabels==i)>0:
+                # add the diferences
+                V[i]=np.sum(descriptors[predictedLabels==i,:]-centers[i],axis=0)
+                l2 = np.linalg.norm(V[i])
+                V[i] = V[i] / l2
+        V = V.flatten()
+        V = V / np.linalg.norm(V)
+        return V
+
     def query(self, image, numOfImages):
         kp, descs = self.orb.detectAndCompute(image, None)
         vl = self.computeVlad(descs)
