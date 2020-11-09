@@ -11,7 +11,7 @@ from numpy import dtype
 # XXX: Check VLfeat source code
 
 class VisualDictionary():
-    def __init__ (self, numWords=64, numFeaturesOnImage=3000):
+    def __init__ (self, numWords=256, numFeaturesOnImage=3000):
         self.numWords = numWords
         self.numFeatures = numFeaturesOnImage
         self.featureDetector = cv2.ORB_create(numFeaturesOnImage)
@@ -67,6 +67,39 @@ class VisualDictionary():
         vd.cluster_centers = pickle.load(fd)
         fd.close()
         return vd
+    
+    
+class VisualDictionaryBinaryFeature():
+    def __init__ (self, numWords=256, numFeaturesOnImage=3000):
+        self.numWords = numWords
+        self.numFeatures = numFeaturesOnImage
+        self.featureDetector = cv2.ORB_create(numFeaturesOnImage)
+        self.descriptors = []
+        self.cluster_centers = []
+        
+    def train(self, image):
+        keypts, descrs = self.featureDetector.detectAndCompute(image, None)
+        self.descriptors.append(descrs)
+    
+    def build(self):
+        self.descriptors = np.array(self.descriptors, dtype=self.descriptors[0].dtype)
+        self.cluster = KMeans(n_clusters=k, init='k-means++', tol=0.0001, verbose=1)
+        print("Training done")
+    
+    # Outputs the index of nearest center using single feature
+    def predict1row(self, descriptors):
+        pass
+    
+    def predict(self, X):
+        pass
+    
+    def save(self, path):
+        pass
+    
+    @staticmethod
+    def load(path):
+        pass
+
 
 class VLAD():
     def __init__ (self, numFeatures=3000):
@@ -124,6 +157,7 @@ class VLAD():
         V = V/np.sqrt(np.dot(V,V))
         return V
     
+    # VLAD with intra-normalization
     def computeVlad2(self, descriptors):
         predictedLabels = self.dictionary.predict(descriptors)
         centers = self.dictionary.cluster_centers
