@@ -1,6 +1,7 @@
 import cv2
-from sklearn.cluster import KMeans
 from sklearn.neighbors import BallTree
+from pyclustering.cluster.kmeans import kmeans
+from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer 
 import mlcrate as mlc
 import pickle
 import numpy as np
@@ -83,7 +84,13 @@ class VisualDictionaryBinaryFeature():
     
     def build(self):
         self.descriptors = np.array(self.descriptors, dtype=self.descriptors[0].dtype)
-        self.cluster = KMeans(n_clusters=k, init='k-means++', tol=0.0001, verbose=1)
+        
+        # Step 1: Initialize cluster centers using K-Means++
+        self.cluster_centers = kmeans_plusplus_initializer(self.descriptors, self.numWords).initialize()
+        
+        # Step 2: Run K-Means with Hamming distance
+        clusters = kmeans(self.descriptors, self.cluster_centers, tolerance, ccore)
+        
         print("Training done")
     
     # Outputs the index of nearest center using single feature
