@@ -1,7 +1,6 @@
 import cv2
 from sklearn.neighbors import BallTree
-from pyclustering.cluster.kmeans import kmeans
-from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer 
+from scipy.spatial.distance import hamming
 import mlcrate as mlc
 import pickle
 import numpy as np
@@ -70,42 +69,57 @@ class VisualDictionary():
         return vd
     
     
-class VisualDictionaryBinaryFeature():
+class VisualDictionaryBinaryFeature(VisualDictionary):
     def __init__ (self, numWords=256, numFeaturesOnImage=3000):
         self.numWords = numWords
         self.numFeatures = numFeaturesOnImage
         self.featureDetector = cv2.ORB_create(numFeaturesOnImage)
         self.descriptors = []
         self.cluster_centers = []
+        self.bestLabels = []
         
     def train(self, image):
         keypts, descrs = self.featureDetector.detectAndCompute(image, None)
         self.descriptors.append(descrs)
     
     def build(self):
-        self.descriptors = np.array(self.descriptors, dtype=self.descriptors[0].dtype)
-        
-        # Step 1: Initialize cluster centers using K-Means++
-        self.cluster_centers = kmeans_plusplus_initializer(self.descriptors, self.numWords).initialize()
-        
-        # Step 2: Run K-Means with Hamming distance
-        clusters = kmeans(self.descriptors, self.cluster_centers, tolerance, ccore)
-        
+        # Not running, really.
+        # We turn to Matlab for computing cluster centers     
         print("Training done")
+        
+    @staticmethod
+    def hamming_distance(f1, f2):
+        assert(len(f1)==len(f2) and f1.dtype==np.uint8 and f2.dtype==np.uint8)
+        return hamming(np.unpackbits(f1), np.unpackbits(f2))*8*len(f1)
     
     # Outputs the index of nearest center using single feature
     def predict1row(self, descriptors):
-        pass
+        assert(descriptors.shape[0]==self.cluster_centers.shape[1])
+        dist = [self.hamming_distance(descriptors, c) for c in self.cluster_centers ]
+        return np.argmin(dist)
     
-    def predict(self, X):
-        pass
+#     def predict(self, X):
+#         indices = []
+#         for r in range(X.shape[0]):
+#             ix = self.predict1row(X[r,:])
+#             indices.append(ix)
+#         return np.array(indices, dtype=np.int)
     
-    def save(self, path):
-        pass
-    
+#     def save(self, path):
+#         pass
+#     
     @staticmethod
     def load(path):
-        pass
+        fd = open(path, "rb")
+        vd = VisualDictionaryBinaryFeature()
+        vd.numWords = pickle.load(fd)
+        vd.numFeatures = pickle.load(fd)
+        vd.featureDetector = cv2.ORB_create(vd.numFeatures)
+        vd.descriptors = pickle.load(fd)
+        vd.bestLabels = pickle.load(fd)
+        vd.cluster_centers = pickle.load(fd)
+        fd.close()
+        return vd
 
 
 class VLAD():
@@ -184,6 +198,20 @@ class VLAD():
         V = V.flatten()
         V = V / np.linalg.norm(V)
         return V
+    
+    #VLAD for Binary features
+    def computeVladBin(self, descriptors):
+        assert(descriptors.dtype==np.uint8 and self.dictionary.cluster_centers.dtype==np.uint8)
+        predictedLabels = self.dictionary.predict(descriptors)
+        centers = self.dictionary.cluster_centers
+        k=self.dictionary.cluster_centers.shape[0]
+        m,d = descriptors.shape
+        V=np.zeros([k,d], dtype=np.float32)
+
+        for i in range(k):
+            if np.sum(predictedLabels==i) > 0:
+                pass
+        pass
 
     def query(self, image, numOfImages):
         kp, descs = self.orb.detectAndCompute(image, None)
@@ -214,7 +242,9 @@ class VLAD():
     
 if __name__ == '__main__':
     vd = VLAD()
-    vd.loadDictionary("/tmp/test_visual_dict.dat")
+    vd.loadDictionary("/home/sujiwo/VmmlWorkspace/Release/vlad/cityscapes_visual_dictionary.dat")
+    descriptors = np.load('/tmp/descriptors.npy')
+    x = vd.computeVlad2(descriptors)
     
     pass
 
