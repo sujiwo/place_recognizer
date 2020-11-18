@@ -90,7 +90,7 @@ class VisualDictionaryBinaryFeature(VisualDictionary):
     @staticmethod
     def hamming_distance(f1, f2):
         assert(len(f1)==len(f2) and f1.dtype==np.uint8 and f2.dtype==np.uint8)
-        return hamming(np.unpackbits(f1), np.unpackbits(f2))*8*len(f1)
+        return cv2.norm(f1, f2, cv2.NORM_HAMMING)
     
     # Outputs the index of nearest center using single feature
     def predict1row(self, descriptors):
@@ -147,6 +147,8 @@ class VLAD():
     def stopTrain(self):
         self.descriptors = np.asarray(self.datasetDescriptors)
         del(self.datasetDescriptors)
+        
+        # XXX: Maybe run PCA here?
         
         # Create index ball-tree
         self.tree = BallTree(self.descriptors, leaf_size=self.leafSize)

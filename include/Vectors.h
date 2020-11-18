@@ -26,8 +26,10 @@ typedef cv::Mat_<unsigned char> Matc;
 typedef cv::Mat_<cv::Vec3b> Matc3;
 
 template<typename I>
-uint Hamming(const cv::Mat_<I> &v1, const cv::Mat_<I> &v2)
+uint HammingDistance(const cv::Mat_<I> &v1, const cv::Mat_<I> &v2)
 {
+	assert(std::is_integral<I>::value and (v1.rows*v1.cols==v2.rows*v2.cols));
+
 
 }
 
