@@ -6,6 +6,8 @@
  */
 
 #include <lib/KMedoids.h>
+#include "Vectors.h"
+
 
 namespace PlaceRecognizer {
 

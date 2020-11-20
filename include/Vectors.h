@@ -25,6 +25,7 @@ typedef cv::Mat_<bool> Matb;
 typedef cv::Mat_<unsigned char> Matc;
 typedef cv::Mat_<cv::Vec3b> Matc3;
 
+
 template<typename I>
 uint HammingDistance(const cv::Mat_<I> &v1, const cv::Mat_<I> &v2)
 {
