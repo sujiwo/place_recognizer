@@ -8,8 +8,11 @@
 #include <iostream>
 #include <Python.h>
 #include <structmember.h>
+#include "BOWKmajorityTrainer.h"
 #include "IncrementalBoW.h"
 #include "conversion.h"
+
+using namespace std;
 
 
 /*
@@ -69,6 +72,27 @@ static PyObject* iBoWDB_load(Place_Recognizer_iBoWDb *self, PyObject *args)
 
 }
 
+static PyObject *py_kmajority(PyObject *self, PyObject *args)
+{
+	NDArrayConverter cvt;
+	PyObject *img_o;
+	int num_clusters;
+	PyArg_ParseTuple(args, "Oi", &img_o, &num_clusters);
+
+	cout << "Clustering with " << num_clusters << endl;
+
+	cv::Mat descriptors_in, centers;
+	descriptors_in = cvt.toMat(img_o);
+
+	cout << "Descriptor sizes:" << descriptors_in.rows << 'x' << descriptors_in.cols << endl;
+
+	cv::BOWKmajorityTrainer kmj(num_clusters);
+	centers = kmj.cluster(descriptors_in);
+
+	PyObject *obj_np = cvt.toNDArray(centers);
+	return obj_np;
+}
+
 static PyMethodDef iBoWDB_methods[] = {
 	{"addImage", (PyCFunction)iBoWDB_addImage, METH_VARARGS, "Add first image to database"},
 	{"addImage2", (PyCFunction)iBoWDB_addImage, METH_VARARGS, "Add subsequent image to database"},
@@ -121,13 +145,7 @@ static PyTypeObject iBoWDB_Type = {
 };
 
 static PyMethodDef place_recognizer_Methods[] = {
-/*
-    {"im_test", method_im_test, METH_NOARGS, "Test Method"},
-	{"autoAdjustGammaRGB", method_autoAdjustGammaRGB, METH_VARARGS, "Automatic gamma adjusment"},
-	{"multiScaleRetinexCP", method_multiScaleRetinexCP, METH_VARARGS, "Multi-scale Retinex with Color Preservation"},
-	{"dynamicHistogramEqualization", method_dynamicHistogramEqualization, METH_VARARGS, "Dynamic Histogram Equalization"},
-	{"exposureFusion", method_exposureFusion, METH_VARARGS, "Exposure Fusion"},
-*/
+	{"kmajority", py_kmajority, METH_VARARGS, "Cluster binary features input with K-Majority Algorithm"},
     {NULL, NULL, 0, NULL}
 };
 

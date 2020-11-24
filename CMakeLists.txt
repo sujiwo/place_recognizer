@@ -64,6 +64,7 @@ include_directories(
 add_library(
 	place_recognizer
 		lib/IncrementalBoW.cpp
+		lib/BOWKmajorityTrainer.cpp
 )
 target_link_libraries(
 	place_recognizer
