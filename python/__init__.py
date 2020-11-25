@@ -1,4 +1,4 @@
 # Module initializer, after installation
 
-from iBoW import *
+from _place_recognizer import *
 # from VLAD import *

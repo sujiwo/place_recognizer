@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <Python.h>
+#
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/core.hpp>
@@ -82,5 +83,24 @@ template<typename T> static
 PyObject* pyopencv_from(const T& src);
 
 
+inline bool objectToVectorKeyPoint(PyObject* obj, std::vector<cv::KeyPoint> &vec)
+{
+    if (!PySequence_Check(obj))
+        return false;
+    PyObject *seq = PySequence_Fast(obj, "KeyPoint");
+    if (seq == NULL)
+        return false;
+    int i, n = (int)PySequence_Fast_GET_SIZE(seq);
+    vec.resize(n);
+
+    PyObject** items = PySequence_Fast_ITEMS(seq);
+    for (i=0; i<n; ++i) {
+    	PyObject *item = items[i];
+    	PyArg_ParseTuple(item, "(dd)fffii", vec[i].pt.x, vec[i].pt.y, vec[i].size, vec[i].angle, vec[i].response, vec[i].octave, vec[i].class_id);
+    }
+
+    Py_DECREF(seq);
+    return i==n;
+}
 
 # endif
