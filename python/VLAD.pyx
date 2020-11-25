@@ -1,5 +1,7 @@
 # import cv2
-
+# Check 
+# https://github.com/cmarshall108/cython-cmake-example.git
+# on how to use CMake with Cython
 
 cdef class VisualDictionaryBinary():
     
