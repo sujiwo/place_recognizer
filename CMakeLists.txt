@@ -20,8 +20,6 @@ find_package (Boost REQUIRED COMPONENTS system serialization filesystem program_
 find_package (OpenCV REQUIRED)
 find_package (OpenMP REQUIRED)
 
-find_package (PythonLibs REQUIRED)
-
 if (OPENMP_FOUND)
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -77,7 +75,7 @@ target_link_libraries(
 )
 
 # Python extension
-add_subdirectory (python)
+add_subdirectory (pythonz)
 #add_library(py_place_recognition SHARED
 #	python/binding.cpp
 #	python/conversion.cpp
@@ -149,5 +147,4 @@ if(rosbag_viewer_FOUND)
 	install(
 		TARGETS ibow_mapper
 			RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-	
 endif()
