@@ -1,9 +1,22 @@
 #include <iostream>
 #include "conversion.h"
+
 /*
  * The following conversion functions are taken/adapted from OpenCV's cv2.cpp file
  * inside modules/python/src2 folder.
  */
+
+#define ERRWRAP2(expr) \
+try \
+{ \
+    PyAllowThreads allowThreads; \
+    expr; \
+} \
+catch (const cv::Exception &e) \
+{ \
+    PyErr_SetString(opencv_error, e.what()); \
+    return 0; \
+}
 
 static int failmsg(const char *fmt, ...)
 {
@@ -132,140 +145,200 @@ public:
 
 NumpyAllocator g_numpyAllocator;
 
-NDArrayConverter::NDArrayConverter() { init(); }
-
-void NDArrayConverter::init()
+template<>
+bool pyopencv_to (PyObject* o, cv::Mat& m, const char* name)
 {
-    import_array();
-}
-
-cv::Mat NDArrayConverter::toMat(const PyObject *o)
-{
-    cv::Mat m;
-
+    bool allowND = true;
     if(!o || o == Py_None)
     {
         if( !m.data )
             m.allocator = &g_numpyAllocator;
+        return true;
+    }
+
+    if( PyInt_Check(o) )
+    {
+        double v[] = {static_cast<double>(PyInt_AsLong((PyObject*)o)), 0., 0., 0.};
+        m = Mat(4, 1, CV_64F, v).clone();
+        return true;
+    }
+    if( PyFloat_Check(o) )
+    {
+        double v[] = {PyFloat_AsDouble((PyObject*)o), 0., 0., 0.};
+        m = Mat(4, 1, CV_64F, v).clone();
+        return true;
+    }
+    if( PyTuple_Check(o) )
+    {
+        int i, sz = (int)PyTuple_Size((PyObject*)o);
+        m = Mat(sz, 1, CV_64F);
+        for( i = 0; i < sz; i++ )
+        {
+            PyObject* oi = PyTuple_GET_ITEM(o, i);
+            if( PyInt_Check(oi) )
+                m.at<double>(i) = (double)PyInt_AsLong(oi);
+            else if( PyFloat_Check(oi) )
+                m.at<double>(i) = (double)PyFloat_AsDouble(oi);
+            else
+            {
+                failmsg("%s is not a numerical tuple", name);
+                m.release();
+                return false;
+            }
+        }
+        return true;
     }
 
     if( !PyArray_Check(o) )
     {
-        failmsg("toMat: Object is not a numpy array");
+        failmsg("%s is not a numpy array, neither a scalar", name);
+        return false;
     }
 
-    PyArrayObject *oarr = (PyArrayObject*)o;
-    int typenum = PyArray_TYPE(oarr);
-    int type = typenum == NPY_UBYTE ? CV_8U : typenum == NPY_BYTE ? CV_8S :
-               typenum == NPY_USHORT ? CV_16U : typenum == NPY_SHORT ? CV_16S :
-               typenum == NPY_INT || typenum == NPY_LONG ? CV_32S :
+    PyArrayObject* oarr = (PyArrayObject*) o;
+
+    bool needcopy = false, needcast = false;
+    int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
+    int type = typenum == NPY_UBYTE ? CV_8U :
+               typenum == NPY_BYTE ? CV_8S :
+               typenum == NPY_USHORT ? CV_16U :
+               typenum == NPY_SHORT ? CV_16S :
+               typenum == NPY_INT ? CV_32S :
+               typenum == NPY_INT32 ? CV_32S :
                typenum == NPY_FLOAT ? CV_32F :
                typenum == NPY_DOUBLE ? CV_64F : -1;
 
     if( type < 0 )
     {
-        failmsg("toMat: Data type = %d is not supported", typenum);
+        if( typenum == NPY_INT64 || typenum == NPY_UINT64 || typenum == NPY_LONG )
+        {
+            needcopy = needcast = true;
+            new_typenum = NPY_INT;
+            type = CV_32S;
+        }
+        else
+        {
+            failmsg("%s data type = %d is not supported", name, typenum);
+            return false;
+        }
     }
 
-    int ndims = PyArray_NDIM(oarr);
+#ifndef CV_MAX_DIM
+    const int CV_MAX_DIM = 32;
+#endif
 
+    int ndims = PyArray_NDIM(oarr);
     if(ndims >= CV_MAX_DIM)
     {
-        failmsg("toMat: Dimensionality (=%d) is too high", ndims);
+        failmsg("%s dimensionality (=%d) is too high", name, ndims);
+        return false;
     }
 
     int size[CV_MAX_DIM+1];
-    size_t step[CV_MAX_DIM+1], elemsize = CV_ELEM_SIZE1(type);
+    size_t step[CV_MAX_DIM+1];
+    size_t elemsize = CV_ELEM_SIZE1(type);
     const npy_intp* _sizes = PyArray_DIMS(oarr);
     const npy_intp* _strides = PyArray_STRIDES(oarr);
-    bool transposed = false;
+    bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX;
 
-    for(int i = 0; i < ndims; i++)
+    for( int i = ndims-1; i >= 0 && !needcopy; i-- )
     {
-        size[i] = (int)_sizes[i];
-        step[i] = (size_t)_strides[i];
+        // these checks handle cases of
+        //  a) multi-dimensional (ndims > 2) arrays, as well as simpler 1- and 2-dimensional cases
+        //  b) transposed arrays, where _strides[] elements go in non-descending order
+        //  c) flipped arrays, where some of _strides[] elements are negative
+        // the _sizes[i] > 1 is needed to avoid spurious copies when NPY_RELAXED_STRIDES is set
+        if( (i == ndims-1 && _sizes[i] > 1 && (size_t)_strides[i] != elemsize) ||
+            (i < ndims-1 && _sizes[i] > 1 && _strides[i] < _strides[i+1]) )
+            needcopy = true;
     }
 
-    if( ndims == 0 || step[ndims-1] > elemsize ) {
+    if( ismultichannel && _strides[1] != (npy_intp)elemsize*_sizes[2] )
+        needcopy = true;
+
+    if (needcopy)
+    {
+        if( needcast ) {
+            o = PyArray_Cast(oarr, new_typenum);
+            oarr = (PyArrayObject*) o;
+        }
+        else {
+            oarr = PyArray_GETCONTIGUOUS(oarr);
+            o = (PyObject*) oarr;
+        }
+
+        _strides = PyArray_STRIDES(oarr);
+    }
+
+    // Normalize strides in case NPY_RELAXED_STRIDES is set
+    size_t default_step = elemsize;
+    for ( int i = ndims - 1; i >= 0; --i )
+    {
+        size[i] = (int)_sizes[i];
+        if ( size[i] > 1 )
+        {
+            step[i] = (size_t)_strides[i];
+            default_step = step[i] * size[i];
+        }
+        else
+        {
+            step[i] = default_step;
+            default_step *= size[i];
+        }
+    }
+
+    // handle degenerate case
+    if( ndims == 0) {
         size[ndims] = 1;
         step[ndims] = elemsize;
         ndims++;
     }
 
-    if( ndims >= 2 && step[0] < step[1] )
-    {
-        std::swap(size[0], size[1]);
-        std::swap(step[0], step[1]);
-        transposed = true;
-    }
-
-    if( ndims == 3 && size[2] <= CV_CN_MAX && step[1] == elemsize*size[2] )
+    if( ismultichannel )
     {
         ndims--;
         type |= CV_MAKETYPE(0, size[2]);
     }
 
-    if( ndims > 2)
+    if( ndims > 2 && !allowND )
     {
-        failmsg("toMat: Object has more than 2 dimensions");
+        failmsg("%s has more than 2 dimensions", name);
+        return false;
     }
 
     m = Mat(ndims, size, type, PyArray_DATA(oarr), step);
+    m.u = g_numpyAllocator.allocate(o, ndims, size, type, step);
+    m.addref();
 
-    if( m.data )
+    if( !needcopy )
     {
-//        m.u->refcount = *refcountFromPyObject(o);
-        m.addref(); // protect the original numpy array from deallocation
-                    // (since Mat destructor will decrement the reference counter)
-    };
-
+        Py_INCREF(o);
+    }
     m.allocator = &g_numpyAllocator;
 
-    if( transposed )
-    {
-        Mat tmp;
-        tmp.allocator = &g_numpyAllocator;
-        transpose(m, tmp);
-        m = tmp;
-    }
-    return m;
+    return true;
 }
 
-PyObject* NDArrayConverter::toNDArray(const cv::Mat& m)
+template<>
+PyObject* pyopencv_from(const cv::Mat& m)
 {
     if( !m.data )
         Py_RETURN_NONE;
     Mat temp, *p = (Mat*)&m;
-    if(!p->u->refcount || p->allocator != &g_numpyAllocator)
+    if(!p->u || p->allocator != &g_numpyAllocator)
     {
         temp.allocator = &g_numpyAllocator;
-        m.copyTo(temp);
+        ERRWRAP2(m.copyTo(temp));
         p = &temp;
     }
-//    p->addref();
-    PyObject *o = (PyObject*)p->u->userdata;
+    PyObject* o = (PyObject*)p->u->userdata;
     Py_INCREF(o);
     return o;
 }
 
 
-
-template<> struct pyopencvVecConverter<KeyPoint>
-{
-    static bool to(PyObject* obj, std::vector<KeyPoint>& value, const ArgInfo info)
-    {
-        return pyopencv_to_generic_vec(obj, value, info);
-    }
-
-    static PyObject* from(const std::vector<KeyPoint>& value)
-    {
-        return pyopencv_from_generic_vec(value);
-    }
-};
-
-
 template<>
-bool pyopencv_to(PyObject* obj, cv::KeyPoint& kp, const char* name)
+bool pyopencv_to (PyObject* obj, cv::KeyPoint& kp, const char* name)
 {
     if(!obj)
         return true;
@@ -273,7 +346,7 @@ bool pyopencv_to(PyObject* obj, cv::KeyPoint& kp, const char* name)
 }
 
 template<>
-PyObject* pyopencv_from(const cv::KeyPoint& kp)
+PyObject* pyopencv_from  (const cv::KeyPoint& kp)
 {
 	return Py_BuildValue("((ff)fffii)", kp.pt.x, kp.pt.y, kp.size, kp.angle, kp.response, kp.octave, kp.class_id);
 }

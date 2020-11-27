@@ -1,9 +1,9 @@
 find_package (PythonLibs REQUIRED)
-find_package (Boost COMPONENTS python REQUIRED)
+find_package (Boost COMPONENTS python numpy REQUIRED)
 
 #set(CMAKE_SHARED_MODULE_PREFIX "")
 
-add_library(_place_recognizer MODULE binding.cpp conversion.cpp)
+add_library(_place_recognizer MODULE binding.cpp conversion.cpp conversion.h)
 set_target_properties (_place_recognizer PROPERTIES 
 	PREFIX ""
 	LIBRARY_OUTPUT_NAME "_place_recognizer"
@@ -17,7 +17,9 @@ target_link_libraries ( _place_recognizer
 	${OpenCV_LIBS}
 	place_recognizer 
 	Boost::serialization
-	Boost::system)
+	Boost::system
+	Boost::python
+	Boost::numpy)
 	
 install (FILES __init__.py
 	DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION} )
