@@ -13,8 +13,12 @@
 #include "conversion.h"
 
 using namespace boost::python;
+namespace py=boost::python;
 namespace np=boost::python::numpy;
 using namespace std;
+
+
+#define ListSize(l) ((PyListObject*)l.ptr())->ob_size
 
 /*
  * Helper function to convert from NDArray to OpenCV Mat
@@ -31,8 +35,8 @@ cv::Mat convertNdArray(np::ndarray &A)
 	bool needcopy = false;
 
 	const int rows = shape[0],
-		cols = ndims>=2 ? shape[1] : 1,
-		channel = ndims==3 ? shape[2] : 1;
+			cols = ndims>=2 ? shape[1] : 1,
+					channel = ndims==3 ? shape[2] : 1;
 
 	char* st = extract<char*>(str(dtype));
 	int type;
@@ -46,7 +50,7 @@ cv::Mat convertNdArray(np::ndarray &A)
 	else throw runtime_error("Unsupported datatype");
 
 	int elemsize = CV_ELEM_SIZE1(type),
-	    cvtype = CV_MAKETYPE(type, channel);
+			cvtype = CV_MAKETYPE(type, channel);
 	bool ismultichannel = ndims == 3 && shape[2] <= CV_CN_MAX;
 
 	for( int i = ndims-1; i >= 0 && !needcopy; i-- )
@@ -60,17 +64,58 @@ cv::Mat convertNdArray(np::ndarray &A)
 				(i < ndims-1 && shape[i] > 1 && strides[i] < strides[i+1]) )
 			needcopy = true;
 	}
-    if( ismultichannel && strides[1] != (npy_intp)elemsize*shape[2] )
-        needcopy = true;
+	if( ismultichannel && strides[1] != (npy_intp)elemsize*shape[2] )
+		needcopy = true;
 
-    if (needcopy) {
-    	// Arrgh! not handled
-    }
-    else {
-    	M = cv::Mat(rows, cols, cvtype, A.get_data());
-    }
+	if (needcopy) {
+		// Arrgh! not handled
+		throw runtime_error("Non-continuous array can't be handled yet");
+	}
+	else {
+		M = cv::Mat(rows, cols, cvtype, A.get_data());
+		M.addref();
+	}
 
 	return M;
+}
+
+
+cv::KeyPoint convertKeyPoint(object &O)
+{
+	assert(extract<string>(O.attr("__class__")=="cv2.KeyPoint"));
+	cv::KeyPoint kp;
+
+	kp.pt.x = extract<float>(O.attr("pt")[0]);
+	kp.pt.y = extract<float>(O.attr("pt")[1]);
+	kp.angle = extract<float>(O.attr("angle"));
+	kp.class_id = extract<int>(O.attr("class_id"));
+	kp.octave = extract<int>(O.attr("octave"));
+	kp.response = extract<float>(O.attr("response"));
+	kp.size = extract<float>(O.attr("size"));
+
+	return kp;
+}
+
+
+vector<cv::KeyPoint> convertKeyPointList(py::list &L)
+{
+	vector<cv::KeyPoint> vKp;
+	uint listsz=ListSize(L);
+	for (uint i=0; i<listsz; i++) {
+		object _k = extract<py::object>(L[i]);
+		auto kp = convertKeyPoint(_k);
+		vKp.push_back(kp);
+	}
+
+	return vKp;
+}
+
+
+cv::DMatch convertDMatch(object &O)
+{
+	assert(extract<string>(O.attr("__class__")=="cv2.KeyPoint"));
+	cv::DMatch D;
+	return D;
 }
 
 
@@ -80,11 +125,16 @@ void acceptString(const string &s)
 }
 
 
-void acceptKeypoint(object _k)
+void acceptKeypoint(object &_k)
 {
-	cv::KeyPoint k;
-	pyopencv_to(_k.ptr(), k);
-	cout << k.pt << endl;
+	cv::KeyPoint K = extract<cv::KeyPoint>(_k);
+	cout << K.size << endl;
+}
+
+
+void acceptList (py::list &_LK)
+{
+	uint listSize = ListSize(_LK);
 }
 
 
@@ -98,18 +148,23 @@ void acceptMat(np::ndarray _M)
 class xIBoW
 {
 public:
-	xIBoW()
-	{}
+	xIBoW() {}
 
-	void addImage(const uint image_id, PyObject* _keypoints, PyObject* _descriptors)
+	void addImage(const uint image_id, py::list &_keypoints, np::ndarray &_descriptors)
 	{
-	/*
-		vector<cv::KeyPoint> keypoints;
-		pyopencv_to(_keypoints, keypoints);
-		auto descriptors = converter.toMat(_descriptors);
-		bow.addImage(image_id, keypoints, descriptors);
-	*/
+		auto vKeys = convertKeyPointList(_keypoints);
+		auto descriptors = convertNdArray(_descriptors);
+		return bow.addImage(image_id, vKeys, descriptors);
 	}
+
+	void addImage2(const uint image_id, py::list &_keypoints, np::ndarray &_descriptors)
+	{
+		auto vKeys = convertKeyPointList(_keypoints);
+		auto descriptors = convertNdArray(_descriptors);
+		return bow.addImage2(image_id, vKeys, descriptors);
+	}
+
+
 
 protected:
 	PlaceRecognizer::IncrementalBoW bow;
@@ -124,6 +179,8 @@ static void minit()
 
 }
 
+static cv::KeyPoint ktype;
+
 BOOST_PYTHON_MODULE(_place_recognizer)
 {
 	minit();
@@ -131,8 +188,16 @@ BOOST_PYTHON_MODULE(_place_recognizer)
 	def("acceptString", acceptString);
 	def("acceptKeypoint", acceptKeypoint);
 	def("acceptMat", acceptMat);
+	def("acceptList", acceptList);
 
 	class_<xIBoW>("IncrementalBoW")
 		.def("addImage", &xIBoW::addImage)
+		.def("addImage2", &xIBoW::addImage2)
 	;
+
+	class_<PlaceRecognizer::ImageMatch>("ImageMatch")
+	;
+
+//	boost::python::converter::registry::push_back(expected_pytype)
 }
+
