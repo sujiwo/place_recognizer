@@ -49,10 +49,21 @@ bool pyopencv_to(PyObject* obj, T& p, const char* name = "<unknown>");
 template<typename T> static
 PyObject* pyopencv_from(const T& src);
 
-template<> bool pyopencv_to (PyObject* o, cv::Mat& m, const char* name);
+bool _pyopencv_toMat (PyObject* o, cv::Mat& m, const char* name);
+bool _pyopencv_toKeyPoint (PyObject* o, cv::KeyPoint& k, const char* name);
+
+template<> bool pyopencv_to (PyObject* o, cv::Mat& m, const char* name)
+{ return _pyopencv_toMat(o, m, name); }
 template<> PyObject* pyopencv_from (const cv::Mat& m);
 
-template<> bool pyopencv_to (PyObject* obj, cv::KeyPoint& kp, const char* name);
+template<> bool pyopencv_to (PyObject* obj, cv::KeyPoint& kp, const char* name)
+{ return _pyopencv_toKeyPoint(obj, kp, name); }
 template<> PyObject* pyopencv_from<cv::KeyPoint> (const cv::KeyPoint& m);
+
+
+
+
+
+
 
 # endif

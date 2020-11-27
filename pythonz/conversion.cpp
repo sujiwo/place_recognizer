@@ -145,8 +145,7 @@ public:
 
 NumpyAllocator g_numpyAllocator;
 
-template<>
-bool pyopencv_to (PyObject* o, cv::Mat& m, const char* name)
+bool _pyopencv_toMat (PyObject* o, cv::Mat& m, const char* name)
 {
     bool allowND = true;
     if(!o || o == Py_None)
@@ -337,8 +336,7 @@ PyObject* pyopencv_from(const cv::Mat& m)
 }
 
 
-template<>
-bool pyopencv_to (PyObject* obj, cv::KeyPoint& kp, const char* name)
+bool _pyopencv_toKeyPoint (PyObject* obj, cv::KeyPoint& kp, const char* name)
 {
     if(!obj)
         return true;
