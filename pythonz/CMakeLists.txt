@@ -3,7 +3,7 @@ find_package (Boost COMPONENTS python numpy REQUIRED)
 
 #set(CMAKE_SHARED_MODULE_PREFIX "")
 
-add_library(_place_recognizer MODULE conversion.cpp binding.cpp )
+add_library(_place_recognizer MODULE binding.cpp )
 set_target_properties (_place_recognizer PROPERTIES 
 	PREFIX ""
 	LIBRARY_OUTPUT_NAME "_place_recognizer"
