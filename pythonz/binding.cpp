@@ -192,13 +192,21 @@ public:
 
 	bool save(const std::string &path)
 	{
-
+		bow.saveToDisk(path);
+		return true;
 	}
 
 	bool load(const std::string &path)
 	{
-
+		bow.loadFromDisk(path);
+		return true;
 	}
+
+	uint numImages() const
+	{ return bow.numImages(); }
+
+	uint numDescriptors() const
+	{ return bow.numDescriptors(); }
 
 protected:
 	PlaceRecognizer::IncrementalBoW bow;
@@ -224,12 +232,19 @@ BOOST_PYTHON_MODULE(_place_recognizer)
 	def("acceptMat", acceptMat);
 	def("acceptList", acceptList);
 
+	class_<PlaceRecognizer::ImageMatch>("ImageMatch")
+		.def_readonly("image_id", &PlaceRecognizer::ImageMatch::image_id)
+		.def_readonly("score", &PlaceRecognizer::ImageMatch::score)
+	;
+
 	class_<xIBoW>("IncrementalBoW")
 		.def("addImage", &xIBoW::addImage)
 		.def("addImage2", &xIBoW::addImage2)
-	;
-
-	class_<PlaceRecognizer::ImageMatch>("ImageMatch")
+		.def("search", &xIBoW::search)
+		.def("save", &xIBoW::save)
+		.def("load", &xIBoW::load)
+		.def_readonly("numImages", &xIBoW::numImages)
+		.def_readonly("numDescriptors", &xIBoW::numDescriptors)
 	;
 
 //	boost::python::converter::registry::push_back(expected_pytype)
