@@ -9,7 +9,8 @@
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 #include "IncrementalBoW.h"
-#include "BOWKmajorityTrainer.h"
+#include "VLAD.h"
+
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include "numpy/ndarrayobject.h"
@@ -225,6 +226,16 @@ protected:
 };
 
 
+class xVLAD
+{
+public:
+	xVLAD() {}
+
+protected:
+	PlaceRecognizer::VLAD mvlad;
+};
+
+
 np::ndarray kmajority(np::ndarray &input)
 {
 	auto Inp = convertNdArray(input);
@@ -276,6 +287,10 @@ BOOST_PYTHON_MODULE(_place_recognizer)
 		.def("load", &xIBoW::load)
 		.def_readonly("numImages", &xIBoW::numImages)
 		.def_readonly("numDescriptors", &xIBoW::numDescriptors)
+	;
+
+	class_<xVLAD>("VLAD")
+		// Add defs here
 	;
 
 //	boost::python::converter::registry::push_back(expected_pytype)

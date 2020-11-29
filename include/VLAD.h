@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <opencv2/core.hpp>
+#include "IncrementalBoW.h"
 
 
 namespace PlaceRecognizer {
@@ -25,11 +26,17 @@ struct VisualDictionary
 
 	bool rebuild (cv::Mat &additional_descriptors);
 
-	cv::Mat predict(const cv::Mat &imageDescriptors);
+	std::vector<uint>
+	predict(const cv::Mat &imageDescriptors) const;
+
+	cv::Mat getCenters() const
+	{ return centers.clone(); }
 
 protected:
 	uint numWords;
 	cv::Mat centers;
+
+	uint predict1row(const cv::Mat &descriptor) const;
 };
 
 
@@ -44,7 +51,10 @@ public:
 
 	void stopTrain();
 
+	bool search(const cv::Mat &image_descriptors, std::vector<ImageMatch> &results) const;
+
 protected:
+	VisualDictionary vDict;
 };
 
 } /* namespace PlaceRecognizer */
