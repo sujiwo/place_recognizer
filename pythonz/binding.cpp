@@ -86,7 +86,7 @@ cv::Mat convertNdArray(np::ndarray &A)
 
 cv::KeyPoint convertKeyPoint(object &O)
 {
-	assert(extract<string>(O.attr("__class__")=="cv2.KeyPoint"));
+	assert(string(extract<string>(O.attr("__class__")))=="cv2.KeyPoint");
 	cv::KeyPoint kp;
 
 	kp.pt.x = extract<float>(O.attr("pt")[0]);
@@ -117,7 +117,7 @@ vector<cv::KeyPoint> convertKeyPointList(py::list &L)
 
 cv::DMatch convertDMatch(object &O)
 {
-	assert(extract<string>(O.attr("__class__")=="cv2.KeyPoint"));
+	assert(string(extract<string>(O.attr("__class__")))=="cv2.DMatch");
 	cv::DMatch D;
 	return D;
 }
@@ -152,10 +152,22 @@ void acceptMat(np::ndarray _M)
 class xIBoW
 {
 public:
-	xIBoW() {}
+	xIBoW(
+			const uint k = 16,
+			const uint s = 150,
+			const uint t = 4,
+			const PlaceRecognizer::IncrementalBoW::MergePolicy merge_policy =
+					PlaceRecognizer::IncrementalBoW::MergePolicy::MERGE_POLICY_NONE,
+			const bool purge_descriptors = true,
+			const uint min_feat_apps = 3) :
+		bow(k, s, t, merge_policy, min_feat_apps)
+	{}
 
 	void addImage(const uint image_id, py::list &_keypoints, np::ndarray &_descriptors)
 	{
+		if (bow.numImages()!=0)
+			return addImage2(image_id, _keypoints, _descriptors);
+
 		auto vKeys = convertKeyPointList(_keypoints);
 		auto descriptors = convertNdArray(_descriptors);
 		return bow.addImage(image_id, vKeys, descriptors);
@@ -213,6 +225,12 @@ protected:
 };
 
 
+np::ndarray kmajority(np::ndarray &input)
+{
+	auto Inp = convertNdArray(input);
+}
+
+
 static void minit()
 {
 	Py_Initialize();
@@ -221,23 +239,36 @@ static void minit()
 
 }
 
-static cv::KeyPoint ktype;
 
 BOOST_PYTHON_MODULE(_place_recognizer)
 {
 	minit();
 
+	/*
+	 * Toy functions to test converter
+	 */
 	def("acceptString", acceptString);
 	def("acceptKeypoint", acceptKeypoint);
 	def("acceptMat", acceptMat);
 	def("acceptList", acceptList);
+
+	def("kmajority", kmajority);
+
+	enum_<PlaceRecognizer::IncrementalBoW::MergePolicy>("MergePolicy")
+		.value("MERGE_POLICY_NONE", PlaceRecognizer::IncrementalBoW::MergePolicy::MERGE_POLICY_NONE)
+		.value("MERGE_POLICY_AND", PlaceRecognizer::IncrementalBoW::MergePolicy::MERGE_POLICY_AND)
+		.value("MERGE_POLICY_OR", PlaceRecognizer::IncrementalBoW::MergePolicy::MERGE_POLICY_OR)
+	;
 
 	class_<PlaceRecognizer::ImageMatch>("ImageMatch")
 		.def_readonly("image_id", &PlaceRecognizer::ImageMatch::image_id)
 		.def_readonly("score", &PlaceRecognizer::ImageMatch::score)
 	;
 
-	class_<xIBoW>("IncrementalBoW")
+	class_<xIBoW>("IncrementalBoW",
+			init<uint,uint,uint,PlaceRecognizer::IncrementalBoW::MergePolicy,bool,uint>
+				(args("k", "s", "t", "merge_policy", "min_feat_apps")) )
+		.def(init<>())
 		.def("addImage", &xIBoW::addImage)
 		.def("addImage2", &xIBoW::addImage2)
 		.def("search", &xIBoW::search)
