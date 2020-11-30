@@ -231,6 +231,15 @@ class xVLAD
 public:
 	xVLAD() {}
 
+	void initTrain()
+	{}
+
+	void stopTrain()
+	{}
+
+	void train(uint imageId, py::list &_keypoints, np::ndarray &_descriptors)
+	{}
+
 protected:
 	PlaceRecognizer::VLAD mvlad;
 };

@@ -26,7 +26,8 @@ VisualDictionary::build (cv::Mat &descriptors)
 bool
 VisualDictionary::rebuild (cv::Mat &add_descriptors)
 {
-
+	// XXX: Not implemented
+	return false;
 }
 
 std::vector<uint>
@@ -54,13 +55,32 @@ VisualDictionary::predict1row(const cv::Mat &descriptor) const
 }
 
 
-VLAD::VLAD() {
-	// TODO Auto-generated constructor stub
-
+VLAD::VLAD(uint numWords, uint _leafSize) :
+	vDict(numWords),
+	leafSize(_leafSize)
+{
 }
 
 VLAD::~VLAD() {
 	// TODO Auto-generated destructor stub
+}
+
+cv::Mat
+VLAD::computeVlad(const cv::Mat &descriptors) const
+{
+	auto predictedLabels = vDict.predict(descriptors);
+}
+
+void
+VLAD::initTrain()
+{
+	trainDescriptors.clear();
+}
+
+void
+VLAD::addImage(uint imageId, const std::vector<cv::KeyPoint> &keypoints, const cv::Mat &descriptors)
+{
+	imageIds.push_back(imageId);
 }
 
 } /* namespace PlaceRecognizer */
