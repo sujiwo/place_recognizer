@@ -58,8 +58,7 @@ VisualDictionary::predict1row(const cv::Mat &descriptor) const
 VLAD::VLAD(uint numWords, uint _leafSize) :
 	vDict(numWords),
 	leafSize(_leafSize)
-{
-}
+{}
 
 VLAD::~VLAD() {
 	// TODO Auto-generated destructor stub
@@ -69,6 +68,7 @@ cv::Mat
 VLAD::computeVlad(const cv::Mat &descriptors) const
 {
 	auto predictedLabels = vDict.predict(descriptors);
+	// Unfinished
 }
 
 void
@@ -81,6 +81,7 @@ void
 VLAD::addImage(uint imageId, const std::vector<cv::KeyPoint> &keypoints, const cv::Mat &descriptors)
 {
 	imageIds.push_back(imageId);
+	// Unfinished
 }
 
 } /* namespace PlaceRecognizer */

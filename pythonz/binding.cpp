@@ -85,6 +85,33 @@ cv::Mat convertNdArray(np::ndarray &A)
 }
 
 
+np::ndarray convertMat(cv::Mat &M)
+{
+//	np::ndarray N = np::from_data(M.data)
+	int n_dims = (M.channels()==1 ? 2 : 3);
+	vector<uint> shape {M.rows, M.cols, M.channels()};
+	if (M.channels()==1)
+		shape = {shape[0], shape[1]};
+	int matType = M.type() & CV_MAT_DEPTH_MASK,
+		chan    = 1 + (M.type() >> CV_CN_SHIFT);
+
+	np::dtype dt = np::dtype::get_builtin<uint8_t>();
+	if (matType==cv::DataType<uint8_t>::type)
+		;
+	else if (matType==cv::DataType<int>::type)
+		dt = np::dtype::get_builtin<int>();
+	else if (matType==cv::DataType<float>::type)
+		dt = np::dtype::get_builtin<float>();
+	else if (matType==cv::DataType<double>::type)
+		dt = np::dtype::get_builtin<double>();
+	else throw runtime_error("Unsupported Mat type");
+	vector<uint> strides {M.channels()*M.cols*M.elemSize1(), M.channels()*M.elemSize1(), M.elemSize1()};
+	if (M.channels()==1)
+		strides = {strides[0], strides[1]};
+	return np::from_data(M.data, dt, shape, strides, py::object());
+}
+
+
 cv::KeyPoint convertKeyPoint(object &O)
 {
 	assert(string(extract<string>(O.attr("__class__")))=="cv2.KeyPoint");
@@ -147,6 +174,14 @@ void acceptMat(np::ndarray _M)
 {
 	cv::Mat M = convertNdArray(_M);
 	cout << M << endl;
+}
+
+
+np::ndarray returnNd(int N)
+{
+	cv::Mat I = cv::Mat::eye(N, N, CV_32F);
+	I.at<int>(0,1) = 2;
+	return convertMat(I);
 }
 
 
@@ -226,6 +261,30 @@ protected:
 };
 
 
+class xVisualDictionary
+{
+public:
+	xVisualDictionary()
+	{}
+
+	bool build(np::ndarray &_descriptors)
+	{
+		cv::Mat descriptors = convertNdArray(_descriptors);
+		return vDict.build(descriptors);
+	}
+
+	np::ndarray centers() const
+	{
+//		np::ndarray Cl;
+//
+//		return Cl;
+	}
+
+protected:
+	PlaceRecognizer::VisualDictionary vDict;
+};
+
+
 class xVLAD
 {
 public:
@@ -271,6 +330,7 @@ BOOST_PYTHON_MODULE(_place_recognizer)
 	def("acceptKeypoint", acceptKeypoint);
 	def("acceptMat", acceptMat);
 	def("acceptList", acceptList);
+	def("returnNd", returnNd);
 
 	def("kmajority", kmajority);
 
