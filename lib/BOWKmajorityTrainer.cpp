@@ -10,9 +10,11 @@
  *      Author: andresf
  */
 
-
+#include <iostream>
+#include <chrono>
 #include "BOWKmajorityTrainer.h"
 
+using namespace std;
 
 
 namespace cv {
@@ -257,6 +259,7 @@ Mat BOWKmajorityTrainer::cluster() const
 
 Mat BOWKmajorityTrainer::cluster(const Mat& descriptors) const
 {
+	cout << "Size: " << descriptors.rows << 'x' << descriptors.cols << endl;
     // Trivial case: less data than clusters, assign one data point per cluster
     if (descriptors.rows <= numClusters)
     {
@@ -284,7 +287,11 @@ Mat BOWKmajorityTrainer::cluster(const Mat& descriptors) const
     KMajority::quantize(index, descriptors, belongsTo, clusterCounts, distanceTo, numClusters);
     for (int iteration=0; iteration<maxIterations; ++iteration)
     {
+    	auto t1 = chrono::system_clock::now();
         KMajority::computeCentroids(descriptors,centroids,belongsTo,clusterCounts,distanceTo);
+        auto t2 = chrono::system_clock::now();
+        auto td = chrono::duration<float>(t2-t1);
+        cout << "Centroids: " << td.count() << " s\n";
 
         index = makePtr<HammingIndex>(inputData, params, HammingDistance());
 
@@ -293,6 +300,8 @@ Mat BOWKmajorityTrainer::cluster(const Mat& descriptors) const
 
         if (converged)
             break;
+
+        cout << "Iteration#: " << iteration << endl;
     }
 
     return centroids;

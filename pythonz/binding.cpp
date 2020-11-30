@@ -89,7 +89,7 @@ np::ndarray convertMat(cv::Mat &M)
 {
 //	np::ndarray N = np::from_data(M.data)
 	int n_dims = (M.channels()==1 ? 2 : 3);
-	vector<uint> shape {M.rows, M.cols, M.channels()};
+	vector<uint> shape {uint(M.rows), uint(M.cols), uint(M.channels())};
 	if (M.channels()==1)
 		shape = {shape[0], shape[1]};
 	int matType = M.type() & CV_MAT_DEPTH_MASK,
@@ -105,7 +105,7 @@ np::ndarray convertMat(cv::Mat &M)
 	else if (matType==cv::DataType<double>::type)
 		dt = np::dtype::get_builtin<double>();
 	else throw runtime_error("Unsupported Mat type");
-	vector<uint> strides {M.channels()*M.cols*M.elemSize1(), M.channels()*M.elemSize1(), M.elemSize1()};
+	vector<uint> strides {uint(M.channels()*M.cols*M.elemSize1()), uint(M.channels()*M.elemSize1()), uint(M.elemSize1())};
 	if (M.channels()==1)
 		strides = {strides[0], strides[1]};
 	return np::from_data(M.data, dt, shape, strides, py::object());
@@ -275,9 +275,8 @@ public:
 
 	np::ndarray centers() const
 	{
-//		np::ndarray Cl;
-//
-//		return Cl;
+		auto C = vDict.getCenters();
+		return convertMat(C);
 	}
 
 protected:
@@ -356,6 +355,11 @@ BOOST_PYTHON_MODULE(_place_recognizer)
 		.def("load", &xIBoW::load)
 		.def_readonly("numImages", &xIBoW::numImages)
 		.def_readonly("numDescriptors", &xIBoW::numDescriptors)
+	;
+
+	class_<xVisualDictionary>("VisualDictionary")
+		.def("build", &xVisualDictionary::build)
+		.def("centers", &xVisualDictionary::centers)
 	;
 
 	class_<xVLAD>("VLAD")

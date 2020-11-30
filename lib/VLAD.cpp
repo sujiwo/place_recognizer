@@ -46,7 +46,7 @@ uint
 VisualDictionary::predict1row(const cv::Mat &descriptor) const
 {
 	assert(descriptor.type()==CV_8UC1);
-	assert(descriptor.size==cv::Size(1,centers.cols));
+	assert(descriptor.rows==1 and descriptor.cols==centers.cols);
 	vector<uint> distances(numWords);
 	for (int i=0; i<numWords; i++) {
 		distances[i] = cv::norm(descriptor, centers.row(i), cv::NormTypes::NORM_HAMMING);
