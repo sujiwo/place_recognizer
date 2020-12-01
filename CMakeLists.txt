@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 project(place_recognizer)
 
-add_compile_options(-std=c++11 -frtti -fopenmp)
+add_compile_options(-std=c++11 -frtti -fopenmp -msse4.2)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/cmake)
 include(UseCython)
 
@@ -66,6 +66,7 @@ add_library(
 		lib/IncrementalBoW.cpp
 		lib/VLAD.cpp
 		lib/BOWKmajorityTrainer.cpp
+		lib/BKMeans.cpp
 )
 target_link_libraries(
 	place_recognizer
