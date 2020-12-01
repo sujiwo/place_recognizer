@@ -133,7 +133,7 @@ void KMajority::majorityVoting(const cv::Mat& accVector, cv::Mat& result, const 
  * @return true if convergence was achieved (cluster assignment didn't changed), false otherwise
  */
 bool KMajority::quantize(cv::Ptr<HammingIndex> index, const Mat &descriptors,
-	std::vector<int> &belongsTo, std::vector<int> &clusterCounts, std::vector<int> &distanceTo, int numClusters)
+	std::vector<int> &belongsTo, std::vector<int> &clusterCounts, std::vector<int> &distanceTo, const int numClusters)
 {
 	bool converged = true;
 
