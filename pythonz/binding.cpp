@@ -9,6 +9,7 @@
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 #include "IncrementalBoW.h"
+#include "BKMeans.h"
 #include "VLAD.h"
 
 
@@ -318,6 +319,16 @@ static void minit()
 }
 
 
+np::ndarray bkmeans(np::ndarray &input, uint K, uint max_iter)
+{
+	auto M = convertNdArray(input);
+	PlaceRecognizer::BKMeans bkm(K, max_iter);
+	bkm.cluster(M);
+	auto C = bkm.get_centroids();
+	return convertMat(C);
+}
+
+
 BOOST_PYTHON_MODULE(_place_recognizer)
 {
 	minit();
@@ -332,6 +343,8 @@ BOOST_PYTHON_MODULE(_place_recognizer)
 	def("returnNd", returnNd);
 
 	def("kmajority", kmajority);
+
+	def("bkmeans", bkmeans);
 
 	enum_<PlaceRecognizer::IncrementalBoW::MergePolicy>("MergePolicy")
 		.value("MERGE_POLICY_NONE", PlaceRecognizer::IncrementalBoW::MergePolicy::MERGE_POLICY_NONE)

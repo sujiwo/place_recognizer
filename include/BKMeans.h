@@ -28,6 +28,7 @@ typedef struct wssestruct {
    This class implements kmeans for binary data.
 */
 
+/*
 class BKMeans
 {
     public:      
@@ -62,53 +63,53 @@ class BKMeans
             verbose = 0;
         };
 
-        /* Train the data.
+         Train the data.
             Returns:
                0: normal
               -1: exception 
-        */
+
         int cluster();
 
-        /* compute WSSSE(Within Set Sum of Squared Errors) */
+         compute WSSSE(Within Set Sum of Squared Errors)
         wssestruct computeCost();
 
-        /* Calculate the assignment for every point, a point may belong to multiple clusters */
+         Calculate the assignment for every point, a point may belong to multiple clusters
         std::vector< std::vector<unsigned int> > calc_assignment();
 
         ~BKMeans();
 
-	    /* Returns a copy of the centroids */
+	     Returns a copy of the centroids
         std::vector<uint64_t *> get_centroids();
 
         uint64_t *get_centroids_pointer();
 
-        /* find nearest center index */
+         find nearest center index
         int findNearestCenter(uint64_t *s);
 
-        /* find all nearest centers with same distance */
+         find all nearest centers with same distance
         std::vector<unsigned int> findAllNearestCenters(uint64_t *s);
 
-        /* find nearest center first, then find all centers which distance difference 
-           is less than or equal to _threshold */
+         find nearest center first, then find all centers which distance difference
+           is less than or equal to _threshold
         std::vector<unsigned int> findAllNearestCentersThreshold(uint64_t *s);
 
-        /* find nearest center first, then find all centers which distance difference 
-           is less than or equal to disthres */
+         find nearest center first, then find all centers which distance difference
+           is less than or equal to disthres
         std::vector<unsigned int> findAllNearestCentersDisthres(uint64_t *s, int disthres);
 
         void setverbose(int level) { verbose = level;};
 
-        /* save trained model (centroids) to file */
+         save trained model (centroids) to file
         int saveModel(const char *modelfile);
-        /* load trained model (centroids) from file */
+         load trained model (centroids) from file
         int loadModel(const char *modelfile);
 
-        /* printf all distances */
+         printf all distances
         void allDistances();
         void allCentroidsDistances();
         void mergeCentroids();
 
-        /* Computes Hamming distance between two samples */
+         Computes Hamming distance between two samples
         unsigned int hamdist(uint64_t *x, uint64_t *y)
         {
 		    unsigned int dist = 0;
@@ -127,24 +128,25 @@ class BKMeans
         uint64_t  _costs; 
         int       _k;
         int       _n;
-        int       _width; /* how many uint64_t one binary data occupies */
-        int       _bit_width; /* how many bits one binary data occupies */
-        float     _threshold; /* in assignment, if second_best_centroid_distance -best_centroid_distance < _threshold,
-				 then the point belongs to 2 centroids */
+        int       _width;  how many uint64_t one binary data occupies
+        int       _bit_width;  how many bits one binary data occupies
+        float     _threshold;  in assignment, if second_best_centroid_distance -best_centroid_distance < _threshold,
+				 then the point belongs to 2 centroids
 
-        int *_counts;   /* the number of samples belong to the cluster */
-        int *_bitsums;  /* bit counts for all samples belong to the cluster */
+        int *_counts;    the number of samples belong to the cluster
+        int *_bitsums;   bit counts for all samples belong to the cluster
 
-        int verbose; /* verbose flag */
-        int epsilon; /* if the distance of new center and old center is less than epsilon,
-                            treat them as not changed and converged */
-        std::vector< std::vector<unsigned int> > _assignment; /* assignment for each point */
-        bool assignFlag; /* whether assignment already calculated */
+        int verbose;  verbose flag
+        int epsilon;  if the distance of new center and old center is less than epsilon,
+                            treat them as not changed and converged
+        std::vector< std::vector<unsigned int> > _assignment;  assignment for each point
+        bool assignFlag;  whether assignment already calculated
 
-	    /* initialize random centroids */ 
+	     initialize random centroids
         int initRandCentroids();
 
 };
+*/
 
 
 namespace PlaceRecognizer {
@@ -160,10 +162,11 @@ wssestruct computeCost();
 /* Calculate the assignment for every point, a point may belong to multiple clusters */
 std::vector< std::vector<unsigned int> > calc_assignment();
 
-~BKMeans();
+~BKMeans()
+{}
 
 /* Returns a copy of the centroids */
-cv::Mat get_centroids() const
+inline cv::Mat get_centroids() const
 { return _centroids.clone(); }
 
 /* find nearest center index */
@@ -203,7 +206,7 @@ unsigned int hamdist(uint64_t *x, uint64_t *y)
     return dist;
 }
 
-uint hamdist(const cv::Mat &X, const cv::Mat &Y)
+uint inline hamdist(const cv::Mat &X, const cv::Mat &Y)
 {
 	uint d=0;
 	assert(X.cols==Y.cols and X.cols%8==0);

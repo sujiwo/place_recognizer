@@ -18,6 +18,7 @@
 
 using namespace std;
 
+/*
 BKMeans::~BKMeans()
 {
     free(_centroids);
@@ -70,7 +71,7 @@ std::vector<unsigned int> BKMeans::findAllNearestCenters(uint64_t *s)
     return v;
 }
 
-/* centroid and distance */
+ centroid and distance
 typedef struct centdist {
     int centroid;
     int dist;
@@ -159,7 +160,7 @@ std::vector<unsigned int> BKMeans::findAllNearestCentersDisthres(uint64_t *s, in
     return v;
 }
 
-/* initialize the centroids randomly */
+ initialize the centroids randomly
 int BKMeans::initRandCentroids()
 {
     srand(time(NULL));
@@ -197,7 +198,7 @@ int BKMeans::initRandCentroids()
     return 0;
 }
 
-/* trainning function */
+ trainning function
 int BKMeans::cluster()
 {
     bool stop;
@@ -406,7 +407,7 @@ void BKMeans::mergeCentroids()
     }
 }
 
-/* compute WSSSE(Within Set Sum of Squared Errors) */
+ compute WSSSE(Within Set Sum of Squared Errors)
 wssestruct BKMeans::computeCost()
 {
     double cost;
@@ -430,7 +431,7 @@ wssestruct BKMeans::computeCost()
 }
 
 
-/* save trained model (centroids) to file */
+ save trained model (centroids) to file
 int BKMeans::saveModel(const char *modelfile)
 {
     FILE *f = fopen(modelfile, "w");
@@ -450,7 +451,7 @@ int BKMeans::saveModel(const char *modelfile)
     return 0;
 }
 
-/* load trained model (centroids) from file */
+ load trained model (centroids) from file
 int BKMeans::loadModel(const char *modelfile)
 {
     ifstream fin(modelfile);
@@ -472,6 +473,7 @@ int BKMeans::loadModel(const char *modelfile)
         
     return 0;
 }
+*/
 
 
 
@@ -511,7 +513,7 @@ BKMeans::cluster(cv::Mat &binary_data)
     // Initialize centroids
     initRandCentroids();
 
-    bool stop;
+    bool stop=false;
     int iter = 0, retcode = 0;
     int bestcenter;
 
@@ -568,7 +570,22 @@ BKMeans::cluster(cv::Mat &binary_data)
 
     	// mergeCentroids ??
     	wssestruct w = computeCost();
+    	if (updates==0) {
+    		stop = true;
+    		printf("\nINFO: algorithm fully converged in %d iterations\n", iter+1);
+    		retcode = BKMEANS_RET_CONV;
+    	}
+
+    	iter++;
+    	// New iteration finished
+    	if (iter >= _maxIters) {
+            stop = true;
+            cout << endl << "INFO: max iterations reached" << endl;
+            retcode = BKMEANS_RET_MAXIT;
+    	}
     }
+
+    return retcode;
 }
 
 int
@@ -587,7 +604,7 @@ BKMeans::initRandCentroids()
 		printf("init centroids: ");
 	// Take K firsts
 	for (int i = 0; i < _k; i++) {
-		_centroids.row(i) = _samples.row(i);
+		_centroids.row(i) = _samples.row(tmp[i]);
 	}
 
 	// OK
@@ -636,6 +653,23 @@ BKMeans::computeCost()
     wsse.cost2 = sqrt(wsse.cost2);
     return wsse;
 }
+
+void
+BKMeans::mergeCentroids()
+{
+    int i, j, dist;
+
+    for (i=0; i<_k; i++) {
+        for (j=0; j<_k; j++) {
+            dist = hamdist(_centroids.row(i), _centroids.row(j));
+            if (j != i && dist < 10) {
+                printf("--- two centroid %d %d dist(%d) too close, converge to one centroid\n", j ,i, dist);
+                _centroids.row(j).setTo(0);
+            }
+        }
+    }
+}
+
 
 
 }	// namespace PlaceRecognizer
