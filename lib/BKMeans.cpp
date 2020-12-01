@@ -505,8 +505,8 @@ BKMeans::cluster(cv::Mat &binary_data)
 
 	_centroids = cv::Mat::zeros(_k, _width, CV_8U);
 	_newcentroids = cv::Mat::zeros(_k, _width, CV_8U);
-	_counts = std::vector<uint>(_k, 0);
-	_bitsums = std::vector<uint>(_k * _bit_width, 0);
+	_counts.resize(_k, 0);
+	_bitsums = cv::Mat_<uint32_t>::zeros(_k, _bit_width);
 
     // Initialize centroids
     initRandCentroids();
@@ -528,7 +528,46 @@ BKMeans::cluster(cv::Mat &binary_data)
 
     		#pragma omp atomic
     		_counts[bestcenter]++;
+
+    		for (w=0; w<_bit_width/8; w++) {
+    			auto sn = _samples.at<uint8_t>(i,w);
+    			for (j=0; j<8; j++) {
+    				if (sn & (0b1<<j)) {
+					#pragma omp atomic
+    					_bitsums(bestcenter, w*8+j) += 1;
+    				}
+    			}
+    		}
     	}
+
+    	// Find new centroids
+    	int updates = 0;
+    	_newcentroids.setTo(0);
+
+    	int bitsum2;
+		#pragma omp parallel for private(bitsum2, i, w, j)
+    	for (int i=0; i<_k; i++) {
+    		if (_counts[i]==0) {
+    			_centroids.row(i).setTo(0);
+    			continue;
+    		}
+    		for (int w=0; w<_width; w++) {
+    			for (int j=0; j<8; j++) {
+    				bitsum2 = _bitsums(i, w*8 + j) * 2;
+    				if (bitsum2 >= _counts[i]) {
+						#pragma omp atomic
+    					_newcentroids.at<uint8_t>(i, w) |= 0b1<<j;
+    				}
+    			}
+    		}
+    		if (hamdist(_newcentroids.row(i), _centroids.row(i)) > epsilon) {
+    			updates++;
+    		}
+    		_centroids.row(i) = _newcentroids.row(i);
+    	}
+
+    	// mergeCentroids ??
+    	wssestruct w = computeCost();
     }
 }
 
@@ -572,6 +611,32 @@ int BKMeans::findNearestCenter(uint sampleNo)
 
 	return id;
 }
+
+
+/* compute WSSSE(Within Set Sum of Squared Errors) */
+wssestruct
+BKMeans::computeCost()
+{
+    double cost;
+    wssestruct wsse;
+    wsse.cost1 = 0;
+    wsse.cost2 = 0;
+
+    int bestcenter, i;
+    #pragma omp parallel for private(bestcenter, cost)
+    for (int i=0; i<_n; i++) {
+        bestcenter = findNearestCenter(i);
+        cost = hamdist(_samples.row(i), _centroids.row(i));
+        #pragma omp atomic
+        wsse.cost1 += cost;
+        #pragma omp atomic
+        wsse.cost2 += cost*cost;
+    }
+
+    wsse.cost2 = sqrt(wsse.cost2);
+    return wsse;
+}
+
 
 }	// namespace PlaceRecognizer
 

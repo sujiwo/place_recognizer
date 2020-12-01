@@ -231,7 +231,7 @@ float     _threshold; /* in assignment, if second_best_centroid_distance -best_c
 		 then the point belongs to 2 centroids */
 
 std::vector<uint> _counts;   /* the number of samples belong to the cluster */
-std::vector<uint> _bitsums;  /* bit counts for all samples belong to the cluster */
+cv::Mat_<uint32_t> _bitsums;  /* bit counts for all samples belong to the cluster */
 
 int verbose = 0; /* verbose flag */
 int epsilon = 0; /* if the distance of new center and old center is less than epsilon,
