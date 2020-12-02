@@ -19,8 +19,8 @@
 #define BKMEANS_RET_MAXIT 2
 
 typedef struct wssestruct {
-    double cost1;
-    double cost2;
+    double cost1=0;
+    double cost2=0;
 } wssestruct;
 
 /*

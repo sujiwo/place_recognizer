@@ -488,6 +488,19 @@ BKMeans::BKMeans(uint K, uint iter_max) :
 {}
 
 
+inline const uint64_t &Take64(const cv::Mat &R, uint n)
+{
+	uint64_t *dt = (uint64_t*)R.data;
+	return dt[n];
+}
+
+inline uint64_t &Take64(cv::Mat &R, uint n)
+{
+	uint64_t *dt = (uint64_t*)R.data;
+	return dt[n];
+}
+
+
 int
 BKMeans::cluster(cv::Mat &binary_data)
 {
@@ -499,7 +512,7 @@ BKMeans::cluster(cv::Mat &binary_data)
 	assert(binary_data.channels()==1);
 
 	_n = binary_data.rows;
-	_samples = binary_data;
+	_samples = binary_data.clone();
 	_bit_width = _samples.cols * 8;
 	if (_bit_width%64 != 0)
 		throw runtime_error("Matrix column is not multiples of 64-bit");
@@ -508,84 +521,92 @@ BKMeans::cluster(cv::Mat &binary_data)
 	_centroids = cv::Mat::zeros(_k, _width, CV_8U);
 	_newcentroids = cv::Mat::zeros(_k, _width, CV_8U);
 	_counts.resize(_k, 0);
-	_bitsums = cv::Mat_<uint32_t>::zeros(_k, _bit_width);
 
-    // Initialize centroids
-    initRandCentroids();
+	// Initialize centroids
+	initRandCentroids();
 
-    bool stop=false;
-    int iter = 0, retcode = 0;
-    int bestcenter;
+	bool stop=false;
+	int iter = 0, retcode = 0;
+	int bestcenter;
 
-    int i,j,w;
-    while (!stop) {
+	int i,j,w;
+	while (!stop) {
 
-    	std::fill(_counts.begin(), _counts.end(), 0);
-    	std::fill(_bitsums.begin(), _bitsums.end(), 0);
+		std::fill(_counts.begin(), _counts.end(), 0);
+		_bitsums = cv::Mat_<uint32_t>::zeros(_k, _bit_width);
 
-        // Assign samples to centroids and compute bitsums
-        #pragma omp parallel for private(bestcenter, w, j, i)
-    	for (i=0; i<_n; i++) {
-    		bestcenter = findNearestCenter(i);
+		// Assign samples to centroids and compute bitsums
+//		#pragma omp parallel for private(bestcenter, w, j, i)
+		for (i=0; i<_n; i++) {
+			bestcenter = findNearestCenter(i);
 
-    		#pragma omp atomic
-    		_counts[bestcenter]++;
+			#pragma omp atomic
+			_counts[bestcenter]++;
 
-    		for (w=0; w<_bit_width/8; w++) {
-    			auto sn = _samples.at<uint8_t>(i,w);
-    			for (j=0; j<8; j++) {
-    				if (sn & (0b1<<j)) {
-					#pragma omp atomic
-    					_bitsums(bestcenter, w*8+j) += 1;
-    				}
-    			}
-    		}
-    	}
-
-    	// Find new centroids
-    	int updates = 0;
-    	_newcentroids.setTo(0);
-
-    	int bitsum2;
-		#pragma omp parallel for private(bitsum2, i, w, j)
-    	for (int i=0; i<_k; i++) {
-    		if (_counts[i]==0) {
-    			_centroids.row(i).setTo(0);
-    			continue;
-    		}
-    		for (int w=0; w<_width; w++) {
-    			for (int j=0; j<8; j++) {
-    				bitsum2 = _bitsums(i, w*8 + j) * 2;
-    				if (bitsum2 >= _counts[i]) {
+			for (w=0; w<_bit_width/64; w++) {
+				auto sn = Take64(_samples.row(i), w);
+				for (j=0; j<64; j++) {
+					if (sn & (0b1<<j)) {
 						#pragma omp atomic
-    					_newcentroids.at<uint8_t>(i, w) |= 0b1<<j;
-    				}
-    			}
-    		}
-    		if (hamdist(_newcentroids.row(i), _centroids.row(i)) > epsilon) {
-    			updates++;
-    		}
-    		_centroids.row(i) = _newcentroids.row(i);
-    	}
+						_bitsums(bestcenter, w*64 + j) += 1;
+					}
+				}
+			}
+		}
 
-    	// mergeCentroids ??
-    	wssestruct w = computeCost();
-    	if (updates==0) {
-    		stop = true;
-    		printf("\nINFO: algorithm fully converged in %d iterations\n", iter+1);
-    		retcode = BKMEANS_RET_CONV;
-    	}
+		// Find new centroids
+		int updates = 0;
+		_newcentroids.setTo(0);
 
-    	iter++;
-    	// New iteration finished
-    	if (iter >= _maxIters) {
-            stop = true;
-            cout << endl << "INFO: max iterations reached" << endl;
-            retcode = BKMEANS_RET_MAXIT;
-    	}
-    }
+		int bitsum2;
+//		#pragma omp parallel for private(bitsum2, i, w, j)
+		for (int i=0; i<_k; i++) {
+			if (_counts[i]==0) {
+				_centroids.row(i).setTo(0);
+				continue;
+			}
+			for (int w=0; w<_width; w++) {
+//				for (int j=0; j<8; j++) {
+//					bitsum2 = _bitsums(i, w*8 + j) * 2;
+//					if (bitsum2 >= _counts[i]) {
+//						#pragma omp atomic
+//						_newcentroids.at<uint8_t>(i, w) |= 0b1<<j;
+//					}
+//				}
+				for (int j=0; j<64; j++) {
+					bitsum2 = _bitsums(i, w*64+j) * 2;
+					if (bitsum2 >= _counts[i]) {
+						#pragma omp atomic
+						Take64(_newcentroids, w) |= 0b1<<j;
+					}
+				}
+			}
+			if (hamdist(_newcentroids.row(i), _centroids.row(i)) > epsilon) {
+				updates++;
+			}
+//			_centroids.row(i) = _newcentroids.row(i);
+			_newcentroids.row(i).copyTo(_centroids.row(i));
+		}
 
-    return retcode;
+		// mergeCentroids ??
+		wssestruct w = computeCost();
+		if (updates==0) {
+			stop = true;
+			printf("\nINFO: algorithm fully converged in %d iterations\n", iter+1);
+			retcode = BKMEANS_RET_CONV;
+		}
+
+		iter++;
+		// New iteration finished
+		cout << "Iteration #" << iter << endl;
+		if (iter >= _maxIters) {
+			stop = true;
+			cout << endl << "INFO: max iterations reached" << endl;
+			retcode = BKMEANS_RET_MAXIT;
+		}
+	}
+
+	return retcode;
 }
 
 int
@@ -604,7 +625,7 @@ BKMeans::initRandCentroids()
 		printf("init centroids: ");
 	// Take K firsts
 	for (int i = 0; i < _k; i++) {
-		_centroids.row(i) = _samples.row(tmp[i]);
+		_samples.row(tmp[i]).copyTo(_centroids.row(i));
 	}
 
 	// OK
@@ -636,14 +657,12 @@ BKMeans::computeCost()
 {
     double cost;
     wssestruct wsse;
-    wsse.cost1 = 0;
-    wsse.cost2 = 0;
 
     int bestcenter, i;
     #pragma omp parallel for private(bestcenter, cost)
     for (int i=0; i<_n; i++) {
         bestcenter = findNearestCenter(i);
-        cost = hamdist(_samples.row(i), _centroids.row(i));
+        cost = hamdist(_samples.row(i), _centroids.row(bestcenter));
         #pragma omp atomic
         wsse.cost1 += cost;
         #pragma omp atomic
