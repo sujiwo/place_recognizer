@@ -5,8 +5,12 @@
  *      Author: sujiwo
  */
 
+#include <vector>
+#include <exception>
 #include "KMedoids.h"
 #include "Vectors.h"
+
+using namespace std;
 
 
 namespace PlaceRecognizer {
@@ -18,6 +22,21 @@ KMedoids::KMedoids(uint N, uint I) :
 
 
 KMedoids::~KMedoids() {}
+
+
+bool
+KMedoids::check_compatible(const cv::Mat &Inp)
+{
+
+}
+
+
+bool
+KMedoids::set_centroids(cv::InputArray M)
+{
+
+	medoids = M.getMat().clone();
+}
 
 
 bool
@@ -33,6 +52,29 @@ KMedoids::cluster(cv::InputArray M)
 	assert(binary_data.channels()==1);
 
 	samples = binary_data;
+	if (samples.rows < numOfClusters)
+		throw runtime_error("Insufficient number of clusters");
+
+	medoids = BinaryData::zeros(numOfClusters, samples.cols);
+	vector<double> errors(numOfClusters, 0);
+	vector<uint>
+		clusterIds(samples.rows, -1),
+		saved(samples.rows, -1);
+
+	double error = std::numeric_limits<double>::max();
+	int ipass = 0;
+
+	do {	// start the loop
+		double total = std::numeric_limits<double>::max();
+		int counter = 0;
+		int period = 10;
+
+		if (counter % period == 0) {
+			// save cluster assignment periodically
+			std::copy(clusterIds.begin(), clusterIds.end(), saved.begin());
+		}
+
+	} while (++ipass < iteration);
 
 	return true;
 }

@@ -27,6 +27,11 @@ public:
 	cv::Mat get_medoids() const
 	{ return medoids.clone(); }
 
+	bool set_centroids(cv::InputArray M);
+
+	inline void reset_centroids()
+	{ medoids.release(); }
+
 protected:
 	typedef cv::Mat_<uint8_t> BinaryData;
 
@@ -36,6 +41,10 @@ protected:
 
 	BinaryData samples;
 	BinaryData medoids;
+
+	static bool check_compatible(const cv::Mat &Inp);
+
+	void getClusterMedoids();
 };
 
 } /* namespace PlaceRecognizer */
