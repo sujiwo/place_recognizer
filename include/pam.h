@@ -16,13 +16,104 @@
 #ifndef __XL_PAM_H
 #define __XL_PAM_H
 
+#include <string>
+#include <cstdlib>
 #include <vector>
 #include <boost/unordered_map.hpp>
 
-#include "DataUtils.h"
-#include "rng.h"
+//#include "rng.h"
 
 using namespace boost;
+
+class Xoroshiro128Random
+{
+    long long s0;
+    long long s1;
+public:
+    Xoroshiro128Random(long long xor64 = 123456789) {
+        SetSeed(xor64);
+    }
+
+    virtual ~Xoroshiro128Random() {}
+
+    void SetSeed(long long xor64 = 123456789) {
+        // set seed
+        // XorShift64* generator to seed:
+        if (xor64 == 0)
+            xor64 = 4101842887655102017L;
+        xor64 ^= (unsigned long long)xor64 >> 12; // a
+        xor64 ^= xor64 << 25; // b
+        xor64 ^= (unsigned long long)xor64 >> 27; // c
+        s0 = xor64 * 2685821657736338717L;
+        xor64 ^= (unsigned long long)xor64 >> 12; // a
+        xor64 ^= xor64 << 25; // b
+        xor64 ^= (unsigned long long)xor64 >> 27; // c
+        s1 = xor64 * 2685821657736338717L;
+    }
+    int nextInt(int n) {
+        if (n <=0) return 0;
+        int r =  (int)((n & -n) == n ? nextLong() & n - 1 // power of two
+                       : (unsigned long long)(((unsigned long long)nextLong() >> 32) * n) >> 32);
+        return r;
+    }
+
+    long long nextLong() {
+        long long t0 = s0, t1 = s1;
+        long long result = t0 + t1;
+        t1 ^= t0;
+        // left rotate: (n << d)|(n >> (INT_BITS - d));
+        s0 = (t0 << 55) | ((unsigned long long)t0 >> (64 - 55));
+        s0 = s0 ^ t1 ^ (t1 << 14); // a, b
+        s1 = (t1 << 36) | ((unsigned long long)t1 >> (64 -36));
+        return result;
+    }
+    // return a uniform distributed double value between [0, 1]
+    double nextDouble() {
+#ifdef __WXOSX__
+        return ((unsigned long long)nextLong() >> 11) * 0x1.0p-53;
+#else
+        char tempStr[] = "0x1.0p-53";
+        double nd = std::strtod(tempStr, NULL);
+        return ((unsigned long long)nextLong() >> 11) * nd;
+#endif
+    }
+
+    std::vector<int> randomSample(int samplesize, int n)
+    {
+        std::vector<int> samples(samplesize);
+        int i=0;
+        boost::unordered_map<int, bool> sample_dict;
+        boost::unordered_map<int, bool>::iterator it;
+        while (sample_dict.size() < samplesize) {
+            int rnd = nextInt(n);
+            if (sample_dict.find(rnd) == sample_dict.end()) {
+                samples[i++] = rnd;
+            }
+            sample_dict[rnd] = true;
+        }
+        return samples;
+    }
+};
+
+
+class DistMatrix
+{
+protected:
+    std::vector<int> ids;
+    bool has_ids;
+public:
+    DistMatrix(const std::vector<int>& _ids=std::vector<int>())
+    : ids(_ids), has_ids(!_ids.empty()) {}
+    virtual ~DistMatrix() {}
+    // Get distance between i-th and j-th object
+    // if ids vector is provided, the distance (i,j) -> distance(ids[i], ids[j])
+    virtual double getDistance(int i, int j) = 0;
+    virtual void setIds(const std::vector<int>& _ids) {
+        ids = _ids;
+        has_ids = !ids.empty();
+    }
+};
+
 
 
 class PAMUtils
