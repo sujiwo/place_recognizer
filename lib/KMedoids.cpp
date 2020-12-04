@@ -72,6 +72,7 @@ KMedoids::cluster(cv::InputArray M)
 		if (counter % period == 0) {
 			// save cluster assignment periodically
 			std::copy(clusterIds.begin(), clusterIds.end(), saved.begin());
+			if (period < std::numeric_limits<uint>::max()/2) period*=2;
 		}
 
 	} while (++ipass < iteration);
