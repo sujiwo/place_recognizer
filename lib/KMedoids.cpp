@@ -39,6 +39,13 @@ KMedoids::set_centroids(cv::InputArray M)
 }
 
 
+void
+KMedoids::getClusterMedoids()
+{
+
+}
+
+
 bool
 KMedoids::cluster(cv::InputArray M)
 {

@@ -15,6 +15,7 @@
 #include <fstream>
 #include <ctime>
 #include <BKMeans.h>
+#include "Vectors.h"
 
 using namespace std;
 
@@ -486,19 +487,6 @@ BKMeans::BKMeans(uint K, uint iter_max) :
 	_threshold(1.0),
 	_counts(K, 0)
 {}
-
-
-inline const uint64_t &Take64(const cv::Mat &R, uint n)
-{
-	uint64_t *dt = (uint64_t*)R.data;
-	return dt[n];
-}
-
-inline uint64_t &Take64(cv::Mat &R, uint n)
-{
-	uint64_t *dt = (uint64_t*)R.data;
-	return dt[n];
-}
 
 
 int
