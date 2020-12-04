@@ -1,6 +1,7 @@
 #include <iostream>
-#include "BKMeans.h"
+#include "pam.h"
 #include "npy.hpp"
+
 #include "opencv2/core.hpp"
 
 using namespace std;
@@ -8,14 +9,22 @@ using namespace PlaceRecognizer;
 
 int main(int argc, char *argv[])
 {
-	BKMeans bkm(256, 20);
 	auto descriptors = npy::loadMat(argv[1]);
+	int K = atoi(argv[2]);
 	cout << descriptors.rows << 'x' << descriptors.cols << endl;
 
-	auto i = bkm.cluster(descriptors);
-	cout << "Output: " << i << endl;
-	auto C = bkm.get_centroids();
-	npy::saveMat(C, "/tmp/BKMeans.out.npy");
+	CvDistMatrix CM(descriptors);
+	LAB pamInit(&CM);
+
+	FastPAM kmediods(descriptors.rows, &CM, &pamInit, K, 300, 0);
+	auto d = kmediods.run();
+
+	auto md = kmediods.getMedoids();
+	cv::Mat medoids(md.size(), descriptors.cols, CV_8UC1);
+	for (int i=0; i<md.size(); i++) {
+		descriptors.row(md[i]).copyTo(medoids.row(i));
+	}
+	npy::saveMat(medoids, "/tmp/medoids.npy");
 
 	return 0;
 }

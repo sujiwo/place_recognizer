@@ -20,6 +20,8 @@
 #include <cstdlib>
 #include <vector>
 #include <boost/unordered_map.hpp>
+#include <opencv2/core.hpp>
+#include "Vectors.h"
 
 //#include "rng.h"
 
@@ -115,6 +117,20 @@ public:
 };
 
 
+class CvDistMatrix : public DistMatrix
+{
+protected:
+	const cv::Mat &data;
+public:
+	CvDistMatrix (const cv::Mat &src) :
+		data(src) {}
+
+	inline double getDistance(int i, int j)
+	{
+		return double( PlaceRecognizer::hamming_distance(data.row(i), data.row(j)) );
+	}
+};
+
 
 class PAMUtils
 {
@@ -202,7 +218,7 @@ protected:
     // Compute the reassignment cost of one swap.
     // h Current object to swap with the medoid
     // mnum Medoid number to be replaced
-    virtual double computeReassignmentCost(int h, int mnum);
+    virtual double computeReassignmentCost(const int h, const int mnum);
     
 protected:
     // Number of observations

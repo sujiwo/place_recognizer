@@ -11,6 +11,7 @@
 // Initializer: BUILD and LAB
 // FastPAM, FastCLARA, FastCLARANS
 
+#include <iostream>
 #include <map>
 #include <vector>
 #include <set>
@@ -388,9 +389,10 @@ double PAM::assignToNearestCluster(std::vector<int> &means) {
 }
 
 // Compute the reassignment cost of one swap.
-double PAM::computeReassignmentCost(int h, int mnum) {
+double PAM::computeReassignmentCost(const int h, const int mnum) {
     double cost = 0.;
     // Compute costs of reassigning other objects j:
+#pragma omp parallel for
     for (int j=0; j < num_obs; ++j) {
         if (h == j) {
             continue;
@@ -400,14 +402,17 @@ double PAM::computeReassignmentCost(int h, int mnum) {
         // distance(j, h) to new medoid
         double dist_h = getDistance(h, j);
         // Check if current medoid of j is removed:
+        double addCost = 0;
         if(assignment[j] == mnum) {
             // Case 1b: j switches to new medoid, or to the second nearest:
-            cost += std::min(dist_h, second[j]) - distcur;
+        	auto addCost = std::min(dist_h, second[j]) - distcur;
         }
         else if(dist_h < distcur) {
             // Case 1c: j is closer to h than its current medoid
-            cost += dist_h - distcur;
+        	addCost = dist_h - distcur;
         } // else Case 1a): j is closer to i than h and m, so no change.
+#pragma omp atomic
+        cost += addCost;
     }
     return cost;
 }
