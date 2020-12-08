@@ -45,6 +45,8 @@ protected:
 	static bool check_compatible(const cv::Mat &Inp);
 
 	static void getClusterMedoids();
+
+	void initialize(std::vector<uint> &ids);
 };
 
 } /* namespace PlaceRecognizer */

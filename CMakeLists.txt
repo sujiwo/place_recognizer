@@ -68,6 +68,7 @@ add_library(
 		lib/BOWKmajorityTrainer.cpp
 		lib/BKMeans.cpp
 		lib/pam.cpp
+		lib/KMedoids.cpp
 )
 target_link_libraries(
 	place_recognizer

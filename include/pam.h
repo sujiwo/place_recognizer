@@ -277,7 +277,7 @@ protected:
     
     // FastPAM1
     // Compute the reassignment cost, for all medoids in one pass.
-    virtual void computeReassignmentCost(int h, std::vector<double>& cost);
+    virtual void computeReassignmentCost(const int h, std::vector<double>& cost);
     
     // FastPAM1
     // Returns a list of clusters. The k<sup>th</sup> cluster contains the ids

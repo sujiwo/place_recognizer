@@ -147,6 +147,7 @@ std::vector<int> LAB::run(const std::vector<int>& ids, int k)
     for (int i=0; i<nn; ++i) sample[i] = ids[i];
     int range = (int)sample.size();
     
+    // XXX: do not change shuffle method
     shuffle(sample, ssize, range);
     
     // First mean is chosen by having the smallest distance sum to all others.
@@ -535,27 +536,27 @@ bool FastPAM::isMedoid(int id) {
     return false;
 }
 
-void FastPAM::computeReassignmentCost(int h, std::vector<double> &cost) {
+void FastPAM::computeReassignmentCost(const int h, std::vector<double> &cost) {
     // h: Current object to swap with any medoid.
     // cost: Cost aggregation array, must have size k
     
     // Compute costs of reassigning other objects j:
     for (int j=0; j<num_obs; ++j) {
-        if (h== j) {
+        if (h==j) {
             continue;
         }
         // distance(j, i) for pi == pj
-        double distcur = nearest[j];
+        auto distcur = nearest[j];
         //  distance(j, o) to second nearest / possible reassignment
-        double distsec = second[j];
+        auto distsec = second[j];
         // distance(j, h) to new medoid
-        double dist_h = getDistance(h, j);
+        auto dist_h = getDistance(h, j);
         // Case 1b: j switches to new medoid, or to the second nearest:
         int pj = assignment[j] & 0x7FFF;
         
         cost[pj] += std::min(dist_h, distsec) - distcur;
         if(dist_h < distcur) {
-            double delta = dist_h - distcur;
+            auto delta = dist_h - distcur;
             // Case 1c: j is closer to h than its current medoid
             for(int pi = 0; pi < pj; pi++) {
               cost[pi] += delta;

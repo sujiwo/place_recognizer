@@ -1,6 +1,8 @@
 #include <iostream>
 #include "pam.h"
 #include "npy.hpp"
+#include <random>
+#include <limits>
 
 #include "opencv2/core.hpp"
 

@@ -5,7 +5,10 @@
  *      Author: sujiwo
  */
 
+#include <random>
 #include <vector>
+#include <set>
+#include <algorithm>
 #include <exception>
 #include "KMedoids.h"
 #include "Vectors.h"
@@ -68,23 +71,40 @@ KMedoids::cluster(cv::InputArray M)
 		clusterIds(samples.rows, -1),
 		saved(samples.rows, -1);
 
-	double error = std::numeric_limits<double>::max();
-	int ipass = 0;
+	initialize(clusterIds);
 
-	do {	// start the loop
-		double total = std::numeric_limits<double>::max();
-		int counter = 0;
-		int period = 10;
-
-		if (counter % period == 0) {
-			// save cluster assignment periodically
-			std::copy(clusterIds.begin(), clusterIds.end(), saved.begin());
-			if (period < std::numeric_limits<uint>::max()/2) period*=2;
-		}
-
-	} while (++ipass < iteration);
 
 	return true;
 }
+
+
+/*
+ * Implementation of LAB (Linear Approximative Build)
+ */
+void
+KMedoids::initialize(std::vector<uint> &ids)
+{
+	// Initialize RNG first
+
+    int nn = (int) ids.size();
+    std::vector<uint> medids;
+    std::set<uint> medids_set;
+
+    // O(sqrt(n)) sample if k^2 < n.
+    int ssize = 10 + (int)ceil(std::sqrt((double)nn));
+    if (ssize > nn) ssize = nn;
+
+    // We need three temporary storage arrays:
+    vector<double>
+    	mindist(nn, DBL_MIN),
+    	bestd(nn),
+		tempd(nn, DBL_MIN),
+		tmp;
+    vector<uint> sample(nn);
+    std::copy(ids.begin(), ids.end(), sample.begin());
+    int range = (int)sample.size();
+    std::random_shuffle(sample.begin(), sample.end());
+}
+
 
 } /* namespace PlaceRecognizer */
