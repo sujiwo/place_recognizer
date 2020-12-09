@@ -18,6 +18,7 @@
 #include <math.h>
 #include <float.h>
 #include <algorithm>    // std::max
+#include <omp.h>
 
 #include "pam.h"
 
@@ -355,7 +356,7 @@ double PAM::run(std::vector<int> &medoids, int maxiter) {
 }
 
 
-double PAM::getDistance(int i, int j) {
+double PAM::getDistance(int i, int j) const {
     return dist_matrix->getDistance(i, j);
 }
 
@@ -487,6 +488,7 @@ double FastPAM::run(std::vector<int>& medoids, int maxiter) {
                 best[min] = DBL_MAX; // Deactivate
             }
         }
+        std::cout << "Iteration: " << iteration << std::endl;
         // ".iteration-" + iteration + ".cost", tc
     }
     // // TODO: we may have accumulated some error on tc.
@@ -536,11 +538,12 @@ bool FastPAM::isMedoid(int id) {
     return false;
 }
 
-void FastPAM::computeReassignmentCost(const int h, std::vector<double> &cost) {
+void FastPAM::computeReassignmentCost(const int h, std::vector<double> &cost) const {
     // h: Current object to swap with any medoid.
     // cost: Cost aggregation array, must have size k
     
     // Compute costs of reassigning other objects j:
+#pragma omp parallel for
     for (int j=0; j<num_obs; ++j) {
         if (h==j) {
             continue;
@@ -554,8 +557,11 @@ void FastPAM::computeReassignmentCost(const int h, std::vector<double> &cost) {
         // Case 1b: j switches to new medoid, or to the second nearest:
         int pj = assignment[j] & 0x7FFF;
         
+#pragma omp atomic
         cost[pj] += std::min(dist_h, distsec) - distcur;
-        if(dist_h < distcur) {
+
+        auto tid = omp_get_thread_num();
+        if(tid==0 and dist_h < distcur) {
             auto delta = dist_h - distcur;
             // Case 1c: j is closer to h than its current medoid
             for(int pi = 0; pi < pj; pi++) {
@@ -569,7 +575,7 @@ void FastPAM::computeReassignmentCost(const int h, std::vector<double> &cost) {
 }
 
 
-double FastPAM::computeReassignmentCost(int h, int mnum)
+double FastPAM::computeReassignmentCost(int h, int mnum) const
 {
     double cost = 0.;
     // Compute costs of reassigning other objects j:

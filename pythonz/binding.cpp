@@ -375,9 +375,11 @@ BOOST_PYTHON_MODULE(_place_recognizer)
 		.def("centers", &xVisualDictionary::centers)
 	;
 
+/*
 	class_<xVLAD>("VLAD")
 		// Add defs here
 	;
+*/
 
 //	boost::python::converter::registry::push_back(expected_pytype)
 }

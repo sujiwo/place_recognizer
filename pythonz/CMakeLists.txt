@@ -21,7 +21,7 @@ target_link_libraries ( _place_recognizer
 	Boost::python
 	Boost::numpy)
 	
-install (FILES __init__.py
+install (FILES __init__.py VLAD.py
 	DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION} )
 
 install(TARGETS _place_recognizer

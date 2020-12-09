@@ -109,7 +109,7 @@ public:
     virtual ~DistMatrix() {}
     // Get distance between i-th and j-th object
     // if ids vector is provided, the distance (i,j) -> distance(ids[i], ids[j])
-    virtual double getDistance(int i, int j) = 0;
+    virtual double getDistance(int i, int j) const = 0;
     virtual void setIds(const std::vector<int>& _ids) {
         ids = _ids;
         has_ids = !ids.empty();
@@ -125,7 +125,7 @@ public:
 	CvDistMatrix (const cv::Mat &src) :
 		data(src) {}
 
-	inline double getDistance(int i, int j)
+	inline double getDistance(int i, int j) const
 	{
 		return double( PlaceRecognizer::hamming_distance(data.row(i), data.row(j)) );
 	}
@@ -205,7 +205,7 @@ public:
 protected:
     
     // Get distance between i-th and j-th object
-    double getDistance(int i, int j);
+    double getDistance(int i, int j) const;
     
     // Run the PAM optimization phase.
     virtual double run(std::vector<int>& medoids, int maxiter);
@@ -277,7 +277,7 @@ protected:
     
     // FastPAM1
     // Compute the reassignment cost, for all medoids in one pass.
-    virtual void computeReassignmentCost(const int h, std::vector<double>& cost);
+    virtual void computeReassignmentCost(const int h, std::vector<double>& cost) const;
     
     // FastPAM1
     // Returns a list of clusters. The k<sup>th</sup> cluster contains the ids
@@ -287,7 +287,7 @@ protected:
     // Compute the reassignment cost of one swap.
     // h Current object to swap with the medoid
     // mnum Medoid number to be replaced
-    virtual double computeReassignmentCost(int h, int mnum);
+    virtual double computeReassignmentCost(const int h, const int mnum) const;
     
     void findBestSwaps(std::vector<int>& medoids,
                        std::vector<int>& bestids,

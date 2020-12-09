@@ -46,6 +46,23 @@ class VisualDictionary():
             indices.append(ix)
         return np.array(indices, dtype=np.int)
     
+    def adapt(self, newDescriptors, dryRun=False):
+        assert(newDescriptors.dtype==self.cluster_centers.dtype)
+        descCenters = self.predict(newDescriptors)
+        descSums = np.zeros(self.cluster_centers.shape, dtype=np.float64)
+        descCount = np.zeros((self.cluster_centers.shape[0],), dtype=np.uint64)
+        for i in range(newDescriptors.shape[0]):
+            c = descCenters[i]
+            f = newDescriptors[i]
+            descSums[c] += f
+            descCount[c] += 1
+        for c in range(self.cluster_centers.shape[0]):
+            descSums[c] /= float(descCount[c])
+        if dryRun==True:
+            return descSums
+        else:
+            self.cluster_centers = descSums
+    
     def save(self, path):
         fd = open(path, "wb")
         pickle.dump(self.numWords, fd)
@@ -140,7 +157,7 @@ class VLAD():
     # train() produces VLAD descriptor of an input image
     def train(self, imageId, image, mask=None):
         keypoints, descriptors = self.orb.detectAndCompute(image, mask)
-        V = self.computeVlad2(descriptors)
+        V = self.computeVlad(descriptors)
         self.imageIds.append(imageId)
         self.datasetDescriptors.append(V)
         
@@ -154,34 +171,34 @@ class VLAD():
         self.tree = BallTree(self.descriptors, leaf_size=self.leafSize)
         print("Done training")
         
-    def computeVlad(self, descriptors, raw=False):
-        predictedLabels = self.dictionary.predict(descriptors)
-        centers = self.dictionary.cluster_centers
-        k=self.dictionary.cluster_centers.shape[0]
-        m,d = descriptors.shape
-        V=np.zeros([k,d])
-
-        #computing the differences
-        # for all the clusters (visual words)
-        for i in range(k):
-            # if there is at least one descriptor in that cluster
-            if np.sum(predictedLabels==i)>0:
-                # add the diferences
-                V[i]=np.sum(descriptors[predictedLabels==i,:]-centers[i],axis=0)
-        
-        if (raw==True):
-            return V
-        
-        V = V.flatten()
-        # power normalization, also called square-rooting normalization
-        V = np.sign(V)*np.sqrt(np.abs(V))
-
-        # L2 normalization
-        V = V/np.sqrt(np.dot(V,V))
-        return V
+#     def computeVlad(self, descriptors, raw=False):
+#         predictedLabels = self.dictionary.predict(descriptors)
+#         centers = self.dictionary.cluster_centers
+#         k=self.dictionary.cluster_centers.shape[0]
+#         m,d = descriptors.shape
+#         V=np.zeros([k,d])
+# 
+#         #computing the differences
+#         # for all the clusters (visual words)
+#         for i in range(k):
+#             # if there is at least one descriptor in that cluster
+#             if np.sum(predictedLabels==i)>0:
+#                 # add the diferences
+#                 V[i]=np.sum(descriptors[predictedLabels==i,:]-centers[i],axis=0)
+#         
+#         if (raw==True):
+#             return V
+#         
+#         V = V.flatten()
+#         # power normalization, also called square-rooting normalization
+#         V = np.sign(V)*np.sqrt(np.abs(V))
+# 
+#         # L2 normalization
+#         V = V/np.sqrt(np.dot(V,V))
+#         return V
     
     # VLAD with intra-normalization
-    def computeVlad2(self, descriptors):
+    def computeVlad(self, descriptors):
         predictedLabels = self.dictionary.predict(descriptors)
         centers = self.dictionary.cluster_centers
         k=self.dictionary.cluster_centers.shape[0]
@@ -194,7 +211,7 @@ class VLAD():
             # if there is at least one descriptor in that cluster
             if np.sum(predictedLabels==i)>0:
                 # add the diferences
-                V[i]=np.sum(descriptors[predictedLabels==i,:]-centers[i],axis=0)
+                V[i]=np.sum(centers[i] - descriptors[predictedLabels==i,:],axis=0)
                 l2 = np.linalg.norm(V[i])
                 V[i] = V[i] / l2
         V = V.flatten()
@@ -241,6 +258,49 @@ class VLAD():
         vld.imageIds = pickle.load(fd)
         fd.close()
         return vld
+    
+    
+    
+class VLAD2():
+    def __init__ (self, dict):
+        self.dictionary = dict
+        self.trainCount = 0
+        
+    def save(self, path):
+        pass
+    
+    @staticmethod
+    def load(path):
+        pass
+    
+    def initTrain(self, leafSize=40):
+        self.datasetDescriptors = None
+        self.imageIds = []
+        self.leafSize = leafSize
+        self.trainDescriptorPtr = []
+        
+    def addImage(self, imageId, descriptors, keypoints=None):
+        if (self.datasetDescriptors==None):
+            self.datasetDescriptors = np.zeros((0,descriptors.shape[1]), dtype=descriptors.dtype)
+        curPtr = self.datasetDescriptors.shape[0]
+        self.trainDescriptorPtr.append((curPtr, curPtr+descriptors.shape[0]))
+        self.datasetDescriptors = np.append(self.datasetDescriptors, descriptors, axis=0)
+        self.imageIds.append(imageId)
+        pass
+    
+    def stopTrain(self):
+        self.descriptors=np.zeros((0,self.datasetDescriptors.shape[1]))
+        print("Cluster center adaptation")
+        self.dictionary.adapt(self.datasetDescriptors)
+        
+        print("Build VLAD")
+        for i in range(len(self.imageIds)):
+            ptr = self.trainDescriptorPtr[i]
+            imgDescriptors = self.datasetDescriptors[ptr[0] : ptr[1]]
+            # XXX: Unfinished
+            
+
+    
     
 if __name__ == '__main__':
     vd = VLAD()
