@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 	CvDistMatrix CM(descriptors);
 	LAB pamInit(&CM);
 
-	FastPAM kmediods(descriptors.rows, &CM, &pamInit, K, 300, 0);
+	FastCLARA kmediods(descriptors.rows, &CM, &pamInit, K, 300, 0, 5, 80*4*K, true);
 	auto d = kmediods.run();
 
 	auto md = kmediods.getMedoids();
