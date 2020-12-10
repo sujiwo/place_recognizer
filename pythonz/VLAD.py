@@ -6,6 +6,7 @@ import pickle
 import numpy as np
 import itertools
 from numpy import dtype
+from copy import copy
 
 
 # XXX: Check VLfeat source code
@@ -261,13 +262,52 @@ class VLAD():
     
 
 class VLADDescriptor:
-    def __init__(self):
-        pass
+    def __init__(self, imageDescriptors, dictionary):
+        assert(isinstance(dictionary, VisualDictionary))
+        self.descriptors, self.centroid_counters = VLADDescriptor.compute(imageDescriptors, dictionary)
+        
+    def shape(self):
+        return self.descriptors.shape
+    
+    @staticmethod
+    def compute(imgDesc, dictionary):
+        predictedLabels = dictionary.predict(imgDesc)
+        centers = dictionary.cluster_centers
+        k=dictionary.cluster_centers.shape[0]
+        m,d = imgDesc.shape
+        V=np.zeros([k,d])
+        C=np.zeros(k, dtype=np.int)
+        #computing the differences
+        # for all the clusters (visual words)
+        for i in range(k):
+            # if there is at least one descriptor in that cluster
+            C[i] = np.sum(predictedLabels==i)
+            if C[i]>0:
+                # add the diferences
+                V[i]=np.sum(centers[i] - imgDesc[predictedLabels==i,:],axis=0)
+                l2 = np.linalg.norm(V[i])
+        return V, C
+    
+    def normalized(self):
+        V = copy(self.descriptors)
+        for r in range(V.shape[0]):
+            l2 = np.linalg.norm(V[r])
+            V[r] = V[r] / l2
+        V = V / np.linalg.norm(V)
+        return V
+    
+    def flattened(self):
+        return self.normalized().flatten()
+    
+    def adaptNewCentroids(self, dictionary, old_centroids):
+        for i in range(self.descriptors.shape[0]):
+            self.descriptors[i] = self.centroid_counters[i]*(dictionary.cluster_centers[i] - old_centroids[i]) + self.descriptors[i]
     
     
 class VLAD2():
-    def __init__ (self, dict):
-        self.dictionary = dict
+    def __init__ (self, D):
+        assert(isinstance(D, VisualDictionary))
+        self.dictionary = D
         self.descriptors = None
         
     def save(self, path):
@@ -292,6 +332,7 @@ class VLAD2():
         self.datasetDescriptors = np.append(self.datasetDescriptors, descriptors, axis=0)
         self.imageIds.append(imageId)
         
+    # query() should return cartesian coordinates
     def query(self, imgDescriptors):
         pass
 
@@ -320,28 +361,40 @@ class VLAD2():
         vDescriptors = vDescriptors / np.linalg.norm(vDescriptors)
         return vDescriptors
     
-    def rebuildVladDescriptors(self):
-        pass
+    def rebuildVladDescriptors(self, oldDictionary):
+        for vd in self.descriptors:
+            vd.adaptNewCentroids(self.dictionary, oldDictionary)
+            
+    def flatNormalDescriptors(self):
+        shp = self.descriptors[0].shape()
+        flatDescriptors = np.zeros((len(self.descriptors), shp[0]*shp[1]))
+        for i in range(len(self.descriptors)):
+            d = self.descriptors[i].flattened()
+            flatDescriptors[i] = d
+        return flatDescriptors
     
     def stopTrain(self):
-        hasTrained = False
+        hasTrained = True
         if (self.descriptors is None):
-            self.descriptors=np.zeros((0,self.datasetDescriptors.shape[1]), dtype=np.float64)
-            hasTrained = True
+            self.descriptors=[]
+            hasTrained = False
         print("Cluster center adaptation")
+        oldDictionary = copy(self.dictionary.cluster_centers)
         self.dictionary.adapt(self.datasetDescriptors.astype(self.dictionary.cluster_centers.dtype))
         
         if hasTrained==True:
-            self.rebuildVladDescriptors()
+            print("Adapting old descriptors to new centroids")
+            self.rebuildVladDescriptors(oldDictionary)
         
-        print("Build VLAD")
+        print("Build new VLAD")
         for i in range(len(self.imageIds)):
             ptr = self.trainDescriptorPtr[i]
             imgDescriptors = self.datasetDescriptors[ptr[0] : ptr[1]]
-            newvd = self.computeVlad(imgDescriptors)
-            self.descriptors = np.append(self.descriptors, newvd, axis=0)
+            newvd = VLADDescriptor(imgDescriptors, self.dictionary)
+            self.descriptors.append (newvd)
 
-        self.tree = BallTree(self.descriptors, leaf_size=self.leafSize)
+        D = self.flatNormalDescriptors()
+        self.tree = BallTree(D, leaf_size=self.leafSize)
     
     
 if __name__ == '__main__':
@@ -351,7 +404,7 @@ if __name__ == '__main__':
     import cv2
     
     vd = VisualDictionary.load("/home/sujiwo/VmmlWorkspace/Release/vlad/cityscapes_visual_dictionary.dat")
-    trainBag = ImageBag('/Data/MapServer/Logs/vls128-conv.bag', '/front_rgb/image_raw')
+    trainBag = ImageBag('/media/sujiwo/VisionMapTest/ready/vls128-conv.bag', '/front_rgb/image_raw')
     sampleList = trainBag.desample(5.0, True, 271.66, 299.74)
     orb = cv2.ORB_create(4000)
     
