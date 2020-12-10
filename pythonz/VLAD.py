@@ -259,6 +259,10 @@ class VLAD():
         fd.close()
         return vld
     
+
+class VLADDescriptor:
+    def __init__(self):
+        pass
     
     
 class VLAD2():
