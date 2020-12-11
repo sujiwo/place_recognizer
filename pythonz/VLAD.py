@@ -333,8 +333,9 @@ class VLAD2():
         self.imageIds.append(imageId)
         
     # query() should return cartesian coordinates
-    def query(self, imgDescriptors):
-        pass
+    def query(self, imgDescriptors, numOfImages=5):
+        vdesc = VLADDescriptor(imgDescriptors, self.dictionary).flattened()
+        dist, idx = self.tree.query(vl, numOfImages)
 
     # Compute VLAD Descriptors, unnormalized
     def computeVlad(self, descriptors):
