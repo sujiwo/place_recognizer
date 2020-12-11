@@ -12,6 +12,9 @@ from copy import copy
 # XXX: Check VLfeat source code
 
 class VisualDictionary():
+    
+    dtype = np.float32
+    
     def __init__ (self, numWords=256, numFeaturesOnImage=3000):
         self.numWords = numWords
         self.numFeatures = numFeaturesOnImage
@@ -68,7 +71,6 @@ class VisualDictionary():
         fd = open(path, "wb")
         pickle.dump(self.numWords, fd)
         pickle.dump(self.numFeatures, fd)
-        pickle.dump(self.descriptors, fd)
         pickle.dump(self.bestLabels, fd)
         pickle.dump(self.cluster_centers, fd)
         fd.close()
@@ -80,7 +82,6 @@ class VisualDictionary():
         vd.numWords = pickle.load(fd)
         vd.numFeatures = pickle.load(fd)
         vd.featureDetector = cv2.ORB_create(vd.numFeatures)
-        vd.descriptors = pickle.load(fd)
         vd.bestLabels = pickle.load(fd)
         vd.cluster_centers = pickle.load(fd)
         fd.close()
@@ -151,7 +152,7 @@ class VLAD():
         self.dictionary = VisualDictionary.load(dictPath)
         
     def initTrain(self, leafSize=40):
-        self.datasetDescriptors = []
+        self.newDatasetDescriptors = []
         self.imageIds = []
         self.leafSize = leafSize
         
@@ -160,11 +161,11 @@ class VLAD():
         keypoints, descriptors = self.orb.detectAndCompute(image, mask)
         V = self.computeVlad(descriptors)
         self.imageIds.append(imageId)
-        self.datasetDescriptors.append(V)
+        self.newDatasetDescriptors.append(V)
         
     def stopTrain(self):
-        self.descriptors = np.asarray(self.datasetDescriptors)
-        del(self.datasetDescriptors)
+        self.descriptors = np.asarray(self.newDatasetDescriptors)
+        del(self.newDatasetDescriptors)
         
         # XXX: Maybe run PCA here?
         
@@ -305,31 +306,50 @@ class VLADDescriptor:
     
     
 class VLAD2():
-    def __init__ (self, D):
-        assert(isinstance(D, VisualDictionary))
-        self.dictionary = D
+    def __init__ (self, D, blank=False):
+        if (blank==False):
+            assert(isinstance(D, VisualDictionary))
+            self.dictionary = D
+        else:
+            self.dictionary = None
         self.descriptors = None
         
     def save(self, path):
-        pass
+        fd = open(path, "wb")
+        pickle.dump(self.leafSize, fd)
+        pickle.dump(self.tree, fd)
+        pickle.dump(self.imageIds, fd)
+        pickle.dump(self.descriptors, fd)
+        pickle.dump(self.dictionary)
+        fd.close()
     
     @staticmethod
     def load(path):
-        pass
+        mvlad = VLAD2(None, True)
+        fd = open(path, "rb")
+        mvlad.leafSize = pickle.load(fd)
+        mvlad.tree = pickle.load(fd)
+        mvlad.imageIds = pickle.load(fd)
+        mvlad.descriptors = pickle.load(fd)
+        mvlad.dictionary = pickle.load(fd)
+        fd.close()
+        return mvlad
     
     def initTrain(self, leafSize=40):
-        self.datasetDescriptors = None
+        self.newDatasetDescriptors = None
         self.imageIds = []
         self.leafSize = leafSize
         self.trainDescriptorPtr = []
         
     # XXX: Insert cartesian coordinate of the image when adding
+    # imageId is actually vestigial data that can be replaced with other datatypes which will be
+    # returned upon query, eg. geographic coordinates
     def addImage(self, imageId, descriptors, keypoints=None):
-        if (self.datasetDescriptors is None):
-            self.datasetDescriptors = np.zeros((0,descriptors.shape[1]), dtype=descriptors.dtype)
-        curPtr = self.datasetDescriptors.shape[0]
+        if (self.newDatasetDescriptors is None):
+            self.newDatasetDescriptors = np.zeros((0,descriptors.shape[1]), dtype=descriptors.dtype)
+        curPtr = self.newDatasetDescriptors.shape[0]
         self.trainDescriptorPtr.append((curPtr, curPtr+descriptors.shape[0]))
-        self.datasetDescriptors = np.append(self.datasetDescriptors, descriptors, axis=0)
+        self.newDatasetDescriptors = np.append(self.newDatasetDescriptors, descriptors.astype(VisualDictionary.dtype), axis=0)
         self.imageIds.append(imageId)
         
     # query() should return cartesian coordinates
@@ -337,24 +357,6 @@ class VLAD2():
         vdesc = VLADDescriptor(imgDescriptors, self.dictionary).flattened()
         dist, idx = self.tree.query(vl, numOfImages)
 
-    # Compute VLAD Descriptors, unnormalized
-    def computeVlad(self, descriptors):
-        predictedLabels = self.dictionary.predict(descriptors)
-        centers = self.dictionary.cluster_centers
-        k=self.dictionary.cluster_centers.shape[0]
-        m,d = descriptors.shape
-        V=np.zeros([k,d])
-
-        #computing the differences
-        # for all the clusters (visual words)
-        for i in range(k):
-            # if there is at least one descriptor in that cluster
-            if np.sum(predictedLabels==i)>0:
-                # add the diferences
-                V[i]=np.sum(centers[i] - descriptors[predictedLabels==i,:],axis=0)
-                l2 = np.linalg.norm(V[i])
-        return V
-    
     @staticmethod
     def normalizeVlad(vDescriptors):
         for r in range(vDescriptors.shape[0]):
@@ -381,31 +383,35 @@ class VLAD2():
             hasTrained = False
         print("Cluster center adaptation")
         oldDictionary = copy(self.dictionary.cluster_centers)
-        self.dictionary.adapt(self.datasetDescriptors.astype(self.dictionary.cluster_centers.dtype))
+        self.dictionary.adapt(self.newDatasetDescriptors)
         
         if hasTrained==True:
-            print("Adapting old descriptors to new centroids")
+            print("Adapting old VLAD descriptors to new centroids")
             self.rebuildVladDescriptors(oldDictionary)
         
-        print("Build new VLAD")
+        print("Build VLAD from data stream")
         for i in range(len(self.imageIds)):
             ptr = self.trainDescriptorPtr[i]
-            imgDescriptors = self.datasetDescriptors[ptr[0] : ptr[1]]
+            imgDescriptors = self.newDatasetDescriptors[ptr[0] : ptr[1]]
             newvd = VLADDescriptor(imgDescriptors, self.dictionary)
             self.descriptors.append (newvd)
 
         D = self.flatNormalDescriptors()
         self.tree = BallTree(D, leaf_size=self.leafSize)
+        
     
     
 if __name__ == '__main__':
     
-    from RandomAccessBag import ImageBag
+    from RandomAccessBag import RandomAccessBag, ImageBag
     from tqdm import tqdm
     import cv2
+    import sys
+    from geodesy import utm
     
-    vd = VisualDictionary.load("/home/sujiwo/VmmlWorkspace/Release/vlad/cityscapes_visual_dictionary.dat")
-    trainBag = ImageBag('/media/sujiwo/VisionMapTest/ready/vls128-conv.bag', '/front_rgb/image_raw')
+    vd = VisualDictionary.load("/home/sujiwo/VmmlWorkspace/Release/vlad/cityscapes_visual_dictionary-all.dat")
+    trainBag = ImageBag(sys.argv[1], '/front_rgb/image_raw')
+    
     sampleList = trainBag.desample(5.0, True, 271.66, 299.74)
     orb = cv2.ORB_create(4000)
     
@@ -417,6 +423,10 @@ if __name__ == '__main__':
         k, d = orb.detectAndCompute(img, None)
         vlad2.addImage(s, d)
     vlad2.stopTrain()
+    
+    vlad2.save("/tmp/vlad2-tiny.dat")
+    
+    mvload = VLAD2.load("/tmp/vlad2-tiny.dat")
     
     pass
 
