@@ -62,6 +62,7 @@ class VisualDictionary():
             descCount[c] += 1
         for c in range(self.cluster_centers.shape[0]):
             descSums[c] /= float(descCount[c])
+        descSums = descSums.astype(np.float32)
         if dryRun==True:
             return descSums
         else:
@@ -74,6 +75,14 @@ class VisualDictionary():
         pickle.dump(self.bestLabels, fd)
         pickle.dump(self.cluster_centers, fd)
         fd.close()
+        
+    @staticmethod
+    def fromClusterCenters(_cluster_centers):
+        vd = VisualDictionary()
+        vd.numWords = _cluster_centers.shape[0]
+        vd.cluster_centers = _cluster_centers
+        return vd
+        
     
     @staticmethod
     def load(path):
@@ -320,7 +329,7 @@ class VLAD2():
         pickle.dump(self.tree, fd)
         pickle.dump(self.imageIds, fd)
         pickle.dump(self.descriptors, fd)
-        pickle.dump(self.dictionary)
+        pickle.dump(self.dictionary.cluster_centers, fd)
         fd.close()
     
     @staticmethod
@@ -328,10 +337,15 @@ class VLAD2():
         mvlad = VLAD2(None, True)
         fd = open(path, "rb")
         mvlad.leafSize = pickle.load(fd)
+        print("Tree 1")
         mvlad.tree = pickle.load(fd)
+        print("Tree 2")
         mvlad.imageIds = pickle.load(fd)
         mvlad.descriptors = pickle.load(fd)
-        mvlad.dictionary = pickle.load(fd)
+#         Cluster centers
+        cc = pickle.load(fd)
+        mvlad.dictionary = VisualDictionary.fromClusterCenters(cc)
+        
         fd.close()
         return mvlad
     
@@ -370,7 +384,7 @@ class VLAD2():
             
     def flatNormalDescriptors(self):
         shp = self.descriptors[0].shape()
-        flatDescriptors = np.zeros((len(self.descriptors), shp[0]*shp[1]))
+        flatDescriptors = np.zeros((len(self.descriptors), shp[0]*shp[1]), dtype=self.descriptors[0].dtype())
         for i in range(len(self.descriptors)):
             d = self.descriptors[i].flattened()
             flatDescriptors[i] = d
@@ -397,6 +411,8 @@ class VLAD2():
             self.descriptors.append (newvd)
 
         D = self.flatNormalDescriptors()
+        # XXX: Switch to KNN ?
+        # Implementation choices: SKlearn vs OpenCV
         self.tree = BallTree(D, leaf_size=self.leafSize)
         
     
@@ -411,22 +427,37 @@ if __name__ == '__main__':
     
     vd = VisualDictionary.load("/home/sujiwo/VmmlWorkspace/Release/vlad/cityscapes_visual_dictionary-all.dat")
     trainBag = ImageBag(sys.argv[1], '/front_rgb/image_raw')
+
+# Training part       
+#     sampleList = trainBag.desample(5.0, True, 271.66, 299.74)
+#     orb = cv2.ORB_create(4000)
+#        
+#     vlad2 = VLAD2(vd)
+#     vlad2.initTrain()
+#     for s in tqdm(sampleList):
+#         img = trainBag[s]
+#         img = cv2.resize(img, (1024,576))
+#         k, d = orb.detectAndCompute(img, None)
+#         vlad2.addImage(s, d)
+#     vlad2.stopTrain()
+#        
+#     vlad2.save("/tmp/vlad2-tiny.dat")
+#     print("Saved")
     
-    sampleList = trainBag.desample(5.0, True, 271.66, 299.74)
+# Training continued
+    mvload = VLAD2.load("/tmp/vlad2-tiny.dat")
+    print("Loaded")
+     
+    sampleList = trainBag.desample(5.0, True, 299.74, 368)
     orb = cv2.ORB_create(4000)
-    
-    vlad2 = VLAD2(vd)
-    vlad2.initTrain()
+    mvload.initTrain()
     for s in tqdm(sampleList):
         img = trainBag[s]
-        img = cv2.resize(img, (1024,576))
+        img = cv2.resize(img, (1024, 576))
         k, d = orb.detectAndCompute(img, None)
-        vlad2.addImage(s, d)
-    vlad2.stopTrain()
-    
-    vlad2.save("/tmp/vlad2-tiny.dat")
-    
-    mvload = VLAD2.load("/tmp/vlad2-tiny.dat")
+        mvload.addImage(s, d)
+    mvload.stopTrain()
+    mvload.save("/tmp/vlad2-cont.dat")
     
     pass
 
