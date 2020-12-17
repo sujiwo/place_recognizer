@@ -279,6 +279,9 @@ class VLADDescriptor:
     def shape(self):
         return self.descriptors.shape
     
+    def dtype(self):
+        return self.descriptors.dtype
+    
     @staticmethod
     def compute(imgDesc, dictionary):
         predictedLabels = dictionary.predict(imgDesc)
@@ -368,8 +371,9 @@ class VLAD2():
         
     # query() should return cartesian coordinates
     def query(self, imgDescriptors, numOfImages=5):
-        vdesc = VLADDescriptor(imgDescriptors, self.dictionary).flattened()
-        dist, idx = self.tree.query(vl, numOfImages)
+        vdesc = VLADDescriptor(imgDescriptors, self.dictionary).flattened().reshape(1,-1)
+        dist, idx = self.tree.query(vdesc, numOfImages)
+        return [self.imageIds[i] for i in idx[0]]
 
     @staticmethod
     def normalizeVlad(vDescriptors):
@@ -431,7 +435,7 @@ if __name__ == '__main__':
 # Training part       
 #     sampleList = trainBag.desample(5.0, True, 271.66, 299.74)
 #     orb = cv2.ORB_create(4000)
-#        
+#         
 #     vlad2 = VLAD2(vd)
 #     vlad2.initTrain()
 #     for s in tqdm(sampleList):
@@ -440,7 +444,7 @@ if __name__ == '__main__':
 #         k, d = orb.detectAndCompute(img, None)
 #         vlad2.addImage(s, d)
 #     vlad2.stopTrain()
-#        
+#         
 #     vlad2.save("/tmp/vlad2-tiny.dat")
 #     print("Saved")
     
