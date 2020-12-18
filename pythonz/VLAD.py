@@ -8,7 +8,7 @@ import itertools
 from numpy import dtype
 from copy import copy
 
-
+np.seterr(all='raise')
 # XXX: Check VLfeat source code
 
 class VisualDictionary():
@@ -305,7 +305,10 @@ class VLADDescriptor:
         V = copy(self.descriptors)
         for r in range(V.shape[0]):
             l2 = np.linalg.norm(V[r])
-            V[r] = V[r] / l2
+            if (l2<1e-3):
+                V[r] = 0
+            else:
+                V[r] = V[r] / l2
         V = V / np.linalg.norm(V)
         return V
     
@@ -325,6 +328,7 @@ class VLAD2():
         else:
             self.dictionary = None
         self.descriptors = None
+        self.imageIds = []
         
     def save(self, path):
         fd = open(path, "wb")
@@ -354,7 +358,6 @@ class VLAD2():
     
     def initTrain(self, leafSize=40):
         self.newDatasetDescriptors = None
-        self.imageIds = []
         self.leafSize = leafSize
         self.trainDescriptorPtr = []
         
@@ -408,8 +411,7 @@ class VLAD2():
             self.rebuildVladDescriptors(oldDictionary)
         
         print("Build VLAD from data stream")
-        for i in range(len(self.imageIds)):
-            ptr = self.trainDescriptorPtr[i]
+        for ptr in self.trainDescriptorPtr:
             imgDescriptors = self.newDatasetDescriptors[ptr[0] : ptr[1]]
             newvd = VLADDescriptor(imgDescriptors, self.dictionary)
             self.descriptors.append (newvd)
