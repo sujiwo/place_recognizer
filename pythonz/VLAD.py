@@ -297,7 +297,9 @@ class VLADDescriptor:
             C[i] = np.sum(predictedLabels==i)
             if C[i]>0:
                 # add the diferences
-                V[i]=np.sum(centers[i] - imgDesc[predictedLabels==i,:],axis=0)
+                # XXX: what's the best formula?
+                cdif = imgDesc[predictedLabels==i,:] - centers[i]
+                V[i]=np.sum(cdif, axis=0)
                 l2 = np.linalg.norm(V[i])
         return V, C
     
