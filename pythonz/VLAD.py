@@ -27,6 +27,7 @@ class VisualDictionary():
         self.descriptors.append(descrs)
     
     def build(self):
+        print("Clustering...")
         self.descriptors = np.array(list(itertools.chain.from_iterable(self.descriptors))).astype(np.float32)
         criteria = (cv2.TERM_CRITERIA_EPS|cv2.TERM_CRITERIA_MAX_ITER, 10, 0.1)
         compactness, self.bestLabels, self.cluster_centers = cv2.kmeans(self.descriptors, self.numWords, None, criteria, 5, cv2.KMEANS_RANDOM_CENTERS)

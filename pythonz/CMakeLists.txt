@@ -27,3 +27,10 @@ install (FILES __init__.py VLAD.py
 install(TARGETS _place_recognizer
 	LIBRARY DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION} )
 	
+catkin_install_python(
+	PROGRAMS
+		examples/cityscape_dict.py
+		examples/query_from_bag.py
+		examples/train_from_bag.py
+	DESTINATION
+		${CATKIN_PACKAGE_BIN_DESTINATION} )

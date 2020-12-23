@@ -14,13 +14,21 @@ import cv2
 import sys
 from place_recognizer import VisualDictionary, VLAD2
 from tqdm import tqdm
+from argparse import ArgumentParser
 
 if __name__=="__main__":
+
+    parser = ArgumentParser(description="VLAD Training with input from ROS Bag File")
+    parser.add_argument("bagfile", type=str, metavar="image_bag")
+    parser.add_argument("topic", type=str)
+    parser.add_argument("visual_dictionary", type=str)
+    parser.add_argument("output", type=str)
+    cmdArgs = parser.parse_args()
     
-    trainBag = ImageBag(sys.argv[1], sys.argv[2])
+    trainBag = ImageBag(cmdArgs.bagfile, cmdArgs.topic)
     orb = cv2.ORB_create(6000)
 
-    visdict = VisualDictionary.load(sys.argv[3])
+    visdict = VisualDictionary.load(cmdArgs.visual_dictionary)
     mapvlad = VLAD2(visdict)
     mapvlad.initTrain()
     
@@ -37,5 +45,5 @@ if __name__=="__main__":
         cv2.waitKey(1)
     
     mapvlad.stopTrain()
-    mapvlad.save(sys.argv[4])
+    mapvlad.save(cmdArgs.output)
     print("Done")

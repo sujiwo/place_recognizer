@@ -4,7 +4,7 @@
 This script is used to perform query against VLAD map in parallel
 
 Usage:
-$ query_from_bag.py <path_to_image_bag> <image_topic> <path_to_map_file> <training_output>
+$ query_from_bag.py <path_to_image_bag> <image_topic> <path_to_map_file> <query_output>
 """
 
 import mlcrate as mlc
@@ -13,12 +13,9 @@ from multiprocessing import Lock
 from geodesy import utm
 import cv2
 import sys
+from argparse import ArgumentParser
 from place_recognizer import VisualDictionary, VLAD2
 
-queryBag = ImageBag(sys.argv[1], sys.argv[2])
-mapvlad = VLAD2.load(sys.argv[3])
-bagLock = Lock()
-orb = cv2.ORB_create(6000)
 
 def processQuery(i):
     # Bag class is not thread-safe
@@ -31,8 +28,21 @@ def processQuery(i):
     return mapvlad.query(d, numOfImages=50)
 
 if __name__=="__main__":
+    
+    parser = ArgumentParser(description="VLAD Query against a ROS Bag File")
+    parser.add_argument("bagfile", type=str, metavar="image_bag")
+    parser.add_argument("topic", type=str)
+    parser.add_argument("mapfile", type=str)
+    parser.add_argument("output", type=str)
+    cmdArgs = parser.parse_args()
+
+    queryBag = ImageBag(cmdArgs.bagfile, cmdArgs.topic)
+    mapvlad = VLAD2.load(cmdArgs.mapfile)
+    bagLock = Lock()
+    orb = cv2.ORB_create(6000)
+    
     print("Ready")
     pool4 = mlc.SuperPool(n_cpu=4)
     positions = pool4.map(processQuery, range(len(queryBag)))
-    mlc.save(positions, "queryResults.dat")
+    mlc.save(positions, cmdArgs.output)
     print("Done")
