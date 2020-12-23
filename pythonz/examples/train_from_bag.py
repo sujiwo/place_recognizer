@@ -23,6 +23,8 @@ if __name__=="__main__":
     parser.add_argument("topic", type=str)
     parser.add_argument("visual_dictionary", type=str)
     parser.add_argument("output", type=str)
+    parser.add_argument("--desample", type=float, metavar="hz", default=5.0, help="Reduce sample rate of images in bag file")
+    parser.add_argument("--resize", type=float, metavar="ratio", default=0.53333, help="Rescale image size with this ratio")
     cmdArgs = parser.parse_args()
     
     trainBag = ImageBag(cmdArgs.bagfile, cmdArgs.topic)
@@ -33,11 +35,11 @@ if __name__=="__main__":
     mapvlad.initTrain()
     
     # Not taking all images
-    sampleList = trainBag.desample(5.0, True)
+    sampleList = trainBag.desample(cmdArgs.desample, True)
     
     for s in tqdm(sampleList):
         # Need smaller size
-        img = cv2.resize(trainBag[s], (1024,576))
+        img = cv2.resize(trainBag[s], (0,0), None, fx=cmdArgs.resize, fy=cmdArgs.resize)
         # XXX: should have taken Segmentation results here
         k, d = orb.detectAndCompute(img, None)
         mapvlad.addImage(s, d)

@@ -1,5 +1,5 @@
 import cv2
-from sklearn.neighbors import BallTree
+from sklearn.neighbors import BallTree, KDTree, KNeighborsClassifier
 from scipy.spatial.distance import hamming
 import mlcrate as mlc
 import pickle
@@ -151,127 +151,6 @@ class VisualDictionaryBinaryFeature(VisualDictionary):
         return vd
 
 
-class VLAD():
-    def __init__ (self, numFeatures=3000):
-        self.numFeatures = numFeatures
-        self.orb = cv2.ORB_create(numFeatures)
-        self.dictionary = None
-        pass
-    
-    def loadDictionary(self, dictPath):
-        self.dictionary = VisualDictionary.load(dictPath)
-        
-    def initTrain(self, leafSize=40):
-        self.newDatasetDescriptors = []
-        self.imageIds = []
-        self.leafSize = leafSize
-        
-    # train() produces VLAD descriptor of an input image
-    def train(self, imageId, image, mask=None):
-        keypoints, descriptors = self.orb.detectAndCompute(image, mask)
-        V = self.computeVlad(descriptors)
-        self.imageIds.append(imageId)
-        self.newDatasetDescriptors.append(V)
-        
-    def stopTrain(self):
-        self.descriptors = np.asarray(self.newDatasetDescriptors)
-        del(self.newDatasetDescriptors)
-        
-        # XXX: Maybe run PCA here?
-        
-        # Create index ball-tree
-        self.tree = BallTree(self.descriptors, leaf_size=self.leafSize)
-        print("Done training")
-        
-#     def computeVlad(self, descriptors, raw=False):
-#         predictedLabels = self.dictionary.predict(descriptors)
-#         centers = self.dictionary.cluster_centers
-#         k=self.dictionary.cluster_centers.shape[0]
-#         m,d = descriptors.shape
-#         V=np.zeros([k,d])
-# 
-#         #computing the differences
-#         # for all the clusters (visual words)
-#         for i in range(k):
-#             # if there is at least one descriptor in that cluster
-#             if np.sum(predictedLabels==i)>0:
-#                 # add the diferences
-#                 V[i]=np.sum(descriptors[predictedLabels==i,:]-centers[i],axis=0)
-#         
-#         if (raw==True):
-#             return V
-#         
-#         V = V.flatten()
-#         # power normalization, also called square-rooting normalization
-#         V = np.sign(V)*np.sqrt(np.abs(V))
-# 
-#         # L2 normalization
-#         V = V/np.sqrt(np.dot(V,V))
-#         return V
-    
-    # VLAD with intra-normalization
-    def computeVlad(self, descriptors):
-        predictedLabels = self.dictionary.predict(descriptors)
-        centers = self.dictionary.cluster_centers
-        k=self.dictionary.cluster_centers.shape[0]
-        m,d = descriptors.shape
-        V=np.zeros([k,d])
-
-        #computing the differences
-        # for all the clusters (visual words)
-        for i in range(k):
-            # if there is at least one descriptor in that cluster
-            if np.sum(predictedLabels==i)>0:
-                # add the diferences
-                V[i]=np.sum(centers[i] - descriptors[predictedLabels==i,:],axis=0)
-                l2 = np.linalg.norm(V[i])
-                V[i] = V[i] / l2
-        V = V.flatten()
-        V = V / np.linalg.norm(V)
-        return V
-    
-    #VLAD for Binary features
-    def computeVladBin(self, descriptors):
-        assert(descriptors.dtype==np.uint8 and self.dictionary.cluster_centers.dtype==np.uint8)
-        predictedLabels = self.dictionary.predict(descriptors)
-        centers = self.dictionary.cluster_centers
-        k=self.dictionary.cluster_centers.shape[0]
-        m,d = descriptors.shape
-        V=np.zeros([k,d], dtype=np.float32)
-
-        for i in range(k):
-            if np.sum(predictedLabels==i) > 0:
-                pass
-        pass
-
-    def query(self, image, numOfImages):
-        kp, descs = self.orb.detectAndCompute(image, None)
-        vl = self.computeVlad(descs)
-        vl = vl.reshape((1, vl.shape[0]))
-        dist, idx = self.tree.query(vl, numOfImages)
-        res = [self.imageIds[i] for i in idx[0]]
-        return res
-
-    def save(self, path):
-        fd = open(path, "wb")
-        pickle.dump(self.numFeatures, fd)
-        pickle.dump(self.leafSize, fd)
-        pickle.dump(self.tree, fd)
-        pickle.dump(self.imageIds, fd)
-        fd.close()
-    
-    @staticmethod
-    def load(path):
-        vld = VLAD()
-        fd = open(path, "rb")
-        vld.numFeatures = pickle.load(fd)
-        vld.leafSize = pickle.load(fd)
-        vld.tree = pickle.load(fd)
-        vld.imageIds = pickle.load(fd)
-        fd.close()
-        return vld
-    
-
 class VLADDescriptor:
     def __init__(self, imageDescriptors, dictionary):
         assert(isinstance(dictionary, VisualDictionary))
@@ -420,9 +299,9 @@ class VLAD2():
             self.descriptors.append (newvd)
 
         D = self.flatNormalDescriptors()
-        # XXX: Switch to KNN ?
+        # XXX: Switch to KDTree ?
         # Implementation choices: SKlearn vs OpenCV
-        self.tree = BallTree(D, leaf_size=self.leafSize)
+        self.tree = KDTree(D, leaf_size=self.leafSize)
         
     
     

@@ -80,27 +80,6 @@ target_link_libraries(
 
 # Python extension
 add_subdirectory (pythonz)
-#add_library(py_place_recognition SHARED
-#	python/binding.cpp
-#	python/conversion.cpp
-#	)
-#target_include_directories( py_place_recognition
-#	PUBLIC
-#		include
-#		${PYTHON_INCLUDE_DIRS})
-#target_link_libraries( py_place_recognition
-#	place_recognizer
-#	${OpenCV_LIBS} )
-#set_target_properties(py_place_recognition
-#	PROPERTIES
-#		LIBRARY_OUTPUT_NAME _place_recognizer.so
-#		PREFIX ""
-#		SUFFIX "" )
-#install(TARGETS py_place_recognition
-#	LIBRARY DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION} )
-#install(DIRECTORY python/
-#	DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION} 
-#	FILES_MATCHING PATTERN "*.py" )
 
 add_executable( recognizer_srv
 	nodes/recognizer_srv.cpp
