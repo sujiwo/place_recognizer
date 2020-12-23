@@ -178,8 +178,7 @@ class VLADDescriptor:
             if C[i]>0:
                 # add the diferences
                 # XXX: what's the best formula?
-                cdif = imgDesc[predictedLabels==i,:] - centers[i]
-                V[i]=np.sum(cdif, axis=0)
+                V[i]=np.sum(imgDesc[predictedLabels==i,:] - centers[i], axis=0)
                 l2 = np.linalg.norm(V[i])
         return V, C
     
@@ -256,8 +255,11 @@ class VLAD2():
         
     # query() should return cartesian coordinates
     def query(self, imgDescriptors, numOfImages=5):
-        vdesc = VLADDescriptor(imgDescriptors, self.dictionary).flattened().reshape(1,-1)
-        dist, idx = self.tree.query(vdesc, numOfImages)
+        queryDescriptors = VLADDescriptor(imgDescriptors, self.dictionary).flattened().reshape(1,-1)
+        dist, idx = self.tree.query(queryDescriptors, numOfImages)
+        
+        # We got the candidates. Let's check each of them
+        
         return [self.imageIds[i] for i in idx[0]]
 
     @staticmethod
@@ -293,6 +295,7 @@ class VLAD2():
             self.rebuildVladDescriptors(oldDictionary)
         
         print("Build VLAD from data stream")
+        # XXX; This loop is amenable to parallelization
         for ptr in self.trainDescriptorPtr:
             imgDescriptors = self.newDatasetDescriptors[ptr[0] : ptr[1]]
             newvd = VLADDescriptor(imgDescriptors, self.dictionary)
