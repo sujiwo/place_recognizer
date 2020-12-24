@@ -12,6 +12,10 @@ np.seterr(all='raise')
 # XXX: Check VLfeat source code
 
 class VisualDictionary():
+    """
+    VisualDictionary is a class that represents codebook to translate image features
+    to VLAD
+    """
     
     dtype = np.float32
     
@@ -206,8 +210,20 @@ class VLADLoadError(IOError):
     
     
 class VLAD2():
-    def __init__ (self, D, blank=False):
-        if (blank==False):
+    """
+    VLAD Indexing and query Class
+    """
+    
+    def __init__ (self, D, _blank=False):
+        """
+        Initialize VLAD class
+        
+        Parameters
+        ----------
+        @param D: VisualDictionary
+        @param _blank: bool, unused
+        """
+        if (_blank==False):
             assert(isinstance(D, VisualDictionary))
             self.dictionary = D
         else:
@@ -216,6 +232,13 @@ class VLAD2():
         self.imageIds = []
         
     def save(self, path):
+        """
+        Save the map to disk
+        
+        Parameters
+        ----------
+        @param path: file name to save map to
+        """
         fd = open(path, "wb")
         fd.write('VLAD')
         pickle.dump(self.leafSize, fd)
@@ -227,6 +250,13 @@ class VLAD2():
     
     @staticmethod
     def load(path):
+        """
+        Load a map from disk
+        
+        Parameters
+        ----------
+        @param path: file name to load map from
+        """
         mvlad = VLAD2(None, True)
         fd = open(path, "rb")
         if (fd.read(4) != "VLAD"):
@@ -245,6 +275,14 @@ class VLAD2():
         return mvlad
     
     def initTrain(self, leafSize=40):
+        """
+        Start a new training session
+        
+        Parameters
+        ----------
+        @param leafSize: integer, number of leafs for index tree. Changing this number
+        may affect query time and/or performance
+        """
         self.newDatasetDescriptors = None
         self.leafSize = leafSize
         self.trainDescriptorPtr = []
@@ -253,6 +291,15 @@ class VLAD2():
     # imageId is actually vestigial data that can be replaced with other datatypes which will be
     # returned upon query, eg. geographic coordinates
     def addImage(self, imageId, descriptors, keypoints=None):
+        """
+        Add image descriptors acquired from a single image during a training session
+        
+        Parameters
+        ----------
+        @param imageId: int, Image Id. Can be numbering of image (start from 0) at the original bag
+        @param descriptors: numpy.ndarray. Image descriptors generated from feature detector
+        @param keypoints: list of keypoints
+        """
         if (self.newDatasetDescriptors is None):
             self.newDatasetDescriptors = np.zeros((0,descriptors.shape[1]), dtype=descriptors.dtype)
         curPtr = self.newDatasetDescriptors.shape[0]
@@ -289,6 +336,9 @@ class VLAD2():
         return flatDescriptors
     
     def stopTrain(self):
+        """
+        Ends a training session
+        """
         hasTrained = True
         if (self.descriptors is None):
             self.descriptors=[]
