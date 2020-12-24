@@ -79,7 +79,7 @@ target_link_libraries(
 )
 
 # Python extension
-add_subdirectory (pythonz)
+add_subdirectory (python)
 
 add_executable( recognizer_srv
 	nodes/recognizer_srv.cpp

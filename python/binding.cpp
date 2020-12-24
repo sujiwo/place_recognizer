@@ -16,7 +16,6 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include "numpy/ndarrayobject.h"
 
-//#include "conversion.h"
 
 using namespace boost::python;
 namespace py=boost::python;

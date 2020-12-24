@@ -32,5 +32,6 @@ catkin_install_python(
 		examples/cityscape_dict.py
 		examples/query_from_bag.py
 		examples/train_from_bag.py
+		examples/server
 	DESTINATION
 		${CATKIN_PACKAGE_BIN_DESTINATION} )
