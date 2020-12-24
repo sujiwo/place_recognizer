@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 """
-This script is used to perform query against VLAD map in parallel
+This script is used to perform query against VLAD/iBoW map in parallel
 
 Usage:
 $ query_from_bag.py <path_to_image_bag> <image_topic> <path_to_map_file> <query_output>
@@ -14,7 +14,7 @@ from geodesy import utm
 import cv2
 import sys
 from argparse import ArgumentParser
-from place_recognizer import VisualDictionary, VLAD2
+from place_recognizer import IncrementalBoW, VisualDictionary, VLAD2, VLADLoadError
 
 
 resizeFactor = 0.533333333
@@ -28,11 +28,11 @@ def processQuery(i):
     
     img = cv2.resize(img, (0,0), None, fx=resizeFactor, fy=resizeFactor)
     k,d = orb.detectAndCompute(img, None)
-    return mapvlad.query(d, numOfImages=50)
+    return mapsource.query(d, numOfImages=50)
 
 if __name__=="__main__":
     
-    parser = ArgumentParser(description="VLAD Query against a ROS Bag File")
+    parser = ArgumentParser(description="VLAD/IBoW Query against a ROS Bag File")
     parser.add_argument("bagfile", type=str, metavar="image_bag")
     parser.add_argument("topic", type=str)
     parser.add_argument("mapfile", type=str)
@@ -40,7 +40,19 @@ if __name__=="__main__":
     cmdArgs = parser.parse_args()
 
     queryBag = ImageBag(cmdArgs.bagfile, cmdArgs.topic)
-    mapvlad = VLAD2.load(cmdArgs.mapfile)
+    mapsource = None
+    
+    try:
+        mapsource = VLAD2.load(cmdArgs.mapfile)
+        print("Map is of VLAD type")
+    except VLADLoadError:
+        mapsource = IncrementalBoW()
+        mapsource.load(cmdArgs.mapfile)
+        print("Map is of IBoW type")
+    except Exception:
+        print("Unable to determine map type")
+        exit(-1)
+    
     bagLock = Lock()
     orb = cv2.ORB_create(6000)
     

@@ -58,7 +58,7 @@ public:
 		return bow.addImage2(image_id, keypoints, descriptors);
 	}
 
-	vector<PlaceRecognizer::ImageMatch> query(cv::Mat &descriptors, const uint numToReturn)
+	vector<uint> query(cv::Mat &descriptors, const uint numToReturn)
 	{
 		vector<vector<cv::DMatch>> descMatches;
 		bow.searchDescriptors(descriptors, descMatches, 2, 32);
@@ -75,7 +75,12 @@ public:
 
 		ret = {imageMatches.begin(), imageMatches.begin()+min(numToReturn, (const uint)imageMatches.size())};
 
-		return ret;
+		vector<uint> imgIds;
+		for (auto &r: ret) {
+			imgIds.push_back((uint)r.image_id);
+		}
+
+		return imgIds;
 	}
 
 	void stopTrain()
@@ -121,9 +126,11 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 			.def("initTrain", &xIBoW::initTrain, "Initialize training step", "leafSize"_a=40)
 			.def("addImage", &xIBoW::addImage)
 			.def("stopTrain", &xIBoW::stopTrain)
-			.def("query", &xIBoW::query)
-			.def("numImages", &xIBoW::numImages)
-			.def("numDescriptors", &xIBoW::numDescriptors)
+			.def("query", &xIBoW::query, "descriptors"_a, "numOfImages"_a=5)
+			.def("save", &xIBoW::save)
+			.def("load", &xIBoW::load)
+			.def_property_readonly("numImages", &xIBoW::numImages, "Number of images stored in database")
+			.def_property_readonly("numDescriptors", &xIBoW::numDescriptors, "Number of descriptors stored in database")
 		;
 
 }

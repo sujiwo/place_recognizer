@@ -26,6 +26,8 @@ if __name__=="__main__":
         img = cv2.imread(f)
         img = cv2.resize(img, (0,0), None, fx=cmdArgs.resize, fy=cmdArgs.resize)
         visdict.train(img)
+        cv2.imshow('image', img)
+        cv2.waitKey(1)
     visdict.build()
 
     visdict.save(cmdArgs.output)

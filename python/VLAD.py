@@ -199,6 +199,10 @@ class VLADDescriptor:
     def adaptNewCentroids(self, dictionary, old_centroids):
         for i in range(self.descriptors.shape[0]):
             self.descriptors[i] = self.centroid_counters[i]*(dictionary.cluster_centers[i] - old_centroids[i]) + self.descriptors[i]
+
+   
+class VLADLoadError(IOError):
+    pass
     
     
 class VLAD2():
@@ -213,6 +217,7 @@ class VLAD2():
         
     def save(self, path):
         fd = open(path, "wb")
+        fd.write('VLAD')
         pickle.dump(self.leafSize, fd)
         pickle.dump(self.tree, fd)
         pickle.dump(self.imageIds, fd)
@@ -224,6 +229,8 @@ class VLAD2():
     def load(path):
         mvlad = VLAD2(None, True)
         fd = open(path, "rb")
+        if (fd.read(4) != "VLAD"):
+            raise VLADLoadError("Not a VLAD map file")
         mvlad.leafSize = pickle.load(fd)
         print("Tree 1")
         mvlad.tree = pickle.load(fd)
