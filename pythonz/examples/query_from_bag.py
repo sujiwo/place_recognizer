@@ -17,13 +17,16 @@ from argparse import ArgumentParser
 from place_recognizer import VisualDictionary, VLAD2
 
 
+resizeFactor = 0.533333333
+
+
 def processQuery(i):
     # Bag class is not thread-safe
     bagLock.acquire()
     img=queryBag[i]
     bagLock.release()
     
-    img = cv2.resize(img, (1024,576))
+    img = cv2.resize(img, (0,0), None, fx=resizeFactor, fy=resizeFactor)
     k,d = orb.detectAndCompute(img, None)
     return mapvlad.query(d, numOfImages=50)
 

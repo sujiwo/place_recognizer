@@ -1,5 +1,5 @@
 import cv2
-from sklearn.neighbors import BallTree, KDTree, KNeighborsClassifier
+from sklearn.neighbors import KDTree
 from scipy.spatial.distance import hamming
 import mlcrate as mlc
 import pickle
@@ -307,48 +307,4 @@ class VLAD2():
         self.tree = KDTree(D, leaf_size=self.leafSize)
         
     
-    
-if __name__ == '__main__':
-    
-    from RandomAccessBag import RandomAccessBag, ImageBag
-    from tqdm import tqdm
-    import cv2
-    import sys
-    from geodesy import utm
-    
-    vd = VisualDictionary.load("/home/sujiwo/VmmlWorkspace/Release/vlad/cityscapes_visual_dictionary-all.dat")
-    trainBag = ImageBag(sys.argv[1], '/front_rgb/image_raw')
-
-# Training part       
-#     sampleList = trainBag.desample(5.0, True, 271.66, 299.74)
-#     orb = cv2.ORB_create(4000)
-#         
-#     vlad2 = VLAD2(vd)
-#     vlad2.initTrain()
-#     for s in tqdm(sampleList):
-#         img = trainBag[s]
-#         img = cv2.resize(img, (1024,576))
-#         k, d = orb.detectAndCompute(img, None)
-#         vlad2.addImage(s, d)
-#     vlad2.stopTrain()
-#         
-#     vlad2.save("/tmp/vlad2-tiny.dat")
-#     print("Saved")
-    
-# Training continued
-    mvload = VLAD2.load("/tmp/vlad2-tiny.dat")
-    print("Loaded")
-     
-    sampleList = trainBag.desample(5.0, True, 299.74, 368)
-    orb = cv2.ORB_create(4000)
-    mvload.initTrain()
-    for s in tqdm(sampleList):
-        img = trainBag[s]
-        img = cv2.resize(img, (1024, 576))
-        k, d = orb.detectAndCompute(img, None)
-        mvload.addImage(s, d)
-    mvload.stopTrain()
-    mvload.save("/tmp/vlad2-cont.dat")
-    
-    pass
 

@@ -25,6 +25,7 @@ if __name__=="__main__":
     parser.add_argument("output", type=str)
     parser.add_argument("--desample", type=float, metavar="hz", default=5.0, help="Reduce sample rate of images in bag file")
     parser.add_argument("--resize", type=float, metavar="ratio", default=0.53333, help="Rescale image size with this ratio")
+    parser.add_argument("--load", type=str, metavar="path", default="", help="Load previous map for retrain")
     cmdArgs = parser.parse_args()
     
     trainBag = ImageBag(cmdArgs.bagfile, cmdArgs.topic)
