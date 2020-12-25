@@ -14,10 +14,7 @@ This library only supports Python; however, all critical routines are written in
 - ROS Melodic (Noetic support is planned)
 - Python 2.7 or 3.8 (Python 3 support is currently broken)
 - pybind11_catkin
-- rosbag_viewer
-
-## SegNet for Segmentation Support (Optional)
-Add $CAFFE_SEGNET_DIR/python to your $PYTHONPATH and it will be detected automatically
+- rosbag_viewer [URL?]
 
 ## Installation
 
@@ -30,12 +27,33 @@ In order to localize using an image, place_recognizer requires a map file create
 
 Mapping process usually takes a long time and not in real-time. Therefore, place_recognizer only supports map creation in offline style that requires accessing ROS bag directly.
 
-### Command Line
+### Semantic Segmentation Support
+
+Add $CAFFE_SEGNET_DIR/python to your $PYTHONPATH and it will be detected automatically
+
+### Command Line Tools
 
 For command-line usage, three scripts are provided:
 
 - train_from_bag.py
+
 - cityscape_dict.py
 - server (ROS service to recognize and image and returns latitude/longitude; currently broken)
 
+To learn how to use these scripts, execute with parameter `-h`.
+
+### Training
+
+Training step prepares an initial vocabulary and a map file to perform localization in query step. place_recognizer supports multi-session (or lifelong) mapping by loading and saving to the same map file. The steps for training a map file are as follows.
+
+1. (For VLAD only) Preparation of initial vocabulary. place_recognizer supports vocabulary creation using Cityscape dataset [URL?]. Other datasets may be used by using Python API, discussed separately.
+2. Training step: The script `train_from_bag.py` can be used to train a new map file from bag file.
+3. Re-training step: The same script allows loading an old map file using parameter `--load`.
+
+### Query
+
+To do
+
 ### Python API
+
+To do next
