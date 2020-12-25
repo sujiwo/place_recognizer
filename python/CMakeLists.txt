@@ -57,6 +57,7 @@ catkin_install_python(
 	PROGRAMS
 		__init__.py
 		VLAD.py
+		Segmentation.py
 	DESTINATION
 		${CATKIN_PACKAGE_PYTHON_DESTINATION} )
 

@@ -121,11 +121,15 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 			.def_readonly("score", &PlaceRecognizer::ImageMatch::score)
 		;
 
+	// Incremental BoW class
 	py::class_<xIBoW> (mod, "IncrementalBoW")
 			.def( py::init<>() )
-			.def("initTrain", &xIBoW::initTrain, "Initialize training step", "leafSize"_a=40)
-			.def("addImage", &xIBoW::addImage)
-			.def("stopTrain", &xIBoW::stopTrain)
+			.def("initTrain", &xIBoW::initTrain,
+				"Initialize training session", "leafSize"_a=40)
+			.def("addImage", &xIBoW::addImage,
+				"Add new image descriptors from an image")
+			.def("stopTrain", &xIBoW::stopTrain,
+				"End a training session")
 			.def("query", &xIBoW::query, "descriptors"_a, "numOfImages"_a=5)
 			.def("save", &xIBoW::save)
 			.def("load", &xIBoW::load)
