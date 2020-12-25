@@ -9,6 +9,7 @@ from time import time
 _hasSegment = False
 
 try:
+    os.environ['GLOG_minloglevel'] = '2'
     import caffe
     _hasSegment = True
     caffe.set_mode_gpu()

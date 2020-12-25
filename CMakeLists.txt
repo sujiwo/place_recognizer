@@ -26,16 +26,6 @@ if (OPENMP_FOUND)
 	set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
-if(SEGNET_DIR)
-	message("SegNet is set")
-	include("${SEGNET_DIR}/share/Caffe/CaffeConfig.cmake")
-	message("SegNet include: " "${Caffe_INCLUDE_DIRS}")
-	set(SEGNET_FOUND true)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_CUDNN -DUSE_LEVELDB -DUSE_LMDB -DUSE_OPENCV -DSEGNET_FOUND=1")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${SEGNET_DIR}/lib")
-	set(SEGNET_WRAPPER "lib/Segmentation.cpp")
-endif()
-
 add_service_files(
 	FILES
 		place_recognizer.srv
@@ -82,8 +72,7 @@ target_link_libraries(
 add_subdirectory (python)
 
 add_executable( recognizer_srv
-	nodes/recognizer_srv.cpp
-	${SEGNET_WRAPPER} )
+	nodes/recognizer_srv.cpp )
 target_link_libraries( recognizer_srv
 	place_recognizer
 	Boost::system
@@ -116,22 +105,17 @@ if(rosbag_viewer_FOUND)
 	add_executable(ibow_mapper 
 		nodes/ibow_mapper.cpp
 		lib/ImageBag.cpp
-		${SEGNET_WRAPPER})
+	)
 	target_include_directories(
 		ibow_mapper 
 			PUBLIC 
 			${rosbag_viewer_INCLUDE_DIRS}
-			${Caffe_INCLUDE_DIRS})
+		)
 	target_link_libraries(
 		ibow_mapper
 			place_recognizer
 			random_access_bag
-			${Caffe_LIBRARIES}
 			${image_transport_LIBRARIES})
-	set_target_properties(
-		ibow_mapper PROPERTIES
-			COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_CUDNN -DUSE_LEVELDB -DUSE_LMDB -DUSE_OPENCV -DSEGNET_FOUND=1"
-			LINK_FLAGS "-L${SEGNET_DIR}/lib")
 	install(
 		TARGETS ibow_mapper
 			RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

@@ -58,6 +58,7 @@ catkin_install_python(
 		__init__.py
 		VLAD.py
 		Segmentation.py
+		GeographicCoordinate.py
 	DESTINATION
 		${CATKIN_PACKAGE_PYTHON_DESTINATION} )
 
