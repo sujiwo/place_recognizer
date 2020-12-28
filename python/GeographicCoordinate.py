@@ -16,6 +16,17 @@ class GeographicTrajectory:
     It supports two types of message:
     - nmea_msgs/Sentence
     - sensor_msgs/NavSatFix
+    
+    Attributes
+    ----------
+    timestamps : list of rospy.Time
+        List of discrete timestamp at which pose is recorded
+    coordinates : np.ndarray
+        Position of vehicle at each timestamp
+    duration : rospy.Duration
+        Length of position recording
+    frame_id : str
+        Frame ID of coordinate sensor
     """
     
     def __init__ (self, randomBag=None, eastingShift=0.0, northingShift=0.0, heightShift=0.0):
@@ -27,9 +38,15 @@ class GeographicTrajectory:
         
         if (randomBag.type()=='sensor_msgs/NavSatFix'):
             self.timestamps, self.coordinates = GeographicTrajectory._parseFromNavSatFix(randomBag, eastingShift, northingShift, heightShift)
+        elif (randomBag.type()=='nmea_msgs/Sentence'):
+            self.timestamps, self.coordinates = GeographicTrajectory._parseFromNmea(randomBag, eastingShift, northingShift, heightShift)
         else:
-            pass
+            raise ValueError("Input bag is of unknown type")
         self.duration = self.timestamps[-1] - self.timestamps[0]
+        self.frame_id = randomBag[0].header.frame_id
+        
+    def __len__(self):
+        return len(self.timestamps)
         
     def positionAt(self, time):
         """
@@ -67,6 +84,7 @@ class GeographicTrajectory:
             track.timestamps.append(t)
         track.duration = self.timestamps[-1] - self.timestamps[0]
         track.coordinates = np.array(track.coordinates)
+        track.frame_id = self.frame_id
         return track
             
     
@@ -82,15 +100,19 @@ class GeographicTrajectory:
             raise RuntimeError("NMEA support is not available; install pynmea2")
         
         parsedCoordinates = []
+        timestamps = []
+        i = 0
         for rawmsg in tqdm(randomBag):
+            i += 1
             try:
                 m = pynmea2.parse(rawmsg.sentence)
-                coord = utm.fromLatLong(float(m.lat), float(m.lon), float(m.altitude))
+                coord = utm.fromLatLong(float(m.latitude), float(m.longitude), float(m.altitude))
                 parsedCoordinates.append([coord.easting, coord.northing, coord.altitude])
+                timestamps.append(rawmsg.header.stamp)
             except:
                 continue
         parsedCoordinates = np.array(parsedCoordinates)
-        return parsedCoordinates
+        return timestamps, parsedCoordinates
                 
     @staticmethod
     def _parseFromNavSatFix(randomBag, eastingShift=0.0, northingShift=0.0, heightShift=0.0):
@@ -108,4 +130,9 @@ class GeographicTrajectory:
 
 
 if __name__=='__main__' :
+    tgbag = RandomAccessBag('/Data/MapServer/Logs/log_2016-12-26-13-21-10.bag', '/nmea_sentence')
+    ps = GeographicTrajectory._parseFromNmea(tgbag)
     pass
+    
+    
+    

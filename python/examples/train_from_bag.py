@@ -9,12 +9,12 @@ from RandomAccessBag import RandomAccessBag, ImageBag
 from multiprocessing import Lock
 import cv2
 import sys
-from place_recognizer import VisualDictionary, VLAD2, IncrementalBoW
+from place_recognizer import VisualDictionary, VLAD2, IncrementalBoW, GeographicTrajectory
 from tqdm import tqdm
 from argparse import ArgumentParser
 
-if __name__ == "__main__":
 
+def main():
     parser = ArgumentParser(description="VLAD & IBoW Mapping with input from ROS Bag File")
     parser.add_argument("bagfile", type=str, metavar="image_bag")
     parser.add_argument("topic", type=str)
@@ -57,4 +57,8 @@ if __name__ == "__main__":
     
     mapper.stopTrain()
     mapper.save(cmdArgs.output)
-    print("Done")
+    print("Done")    
+
+
+if __name__ == "__main__":
+    main()
