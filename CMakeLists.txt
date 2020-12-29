@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 project(place_recognizer)
 
-add_compile_options(-std=c++11 -frtti -fopenmp -msse4.2)
+add_compile_options(-std=c++11 -frtti -fopenmp -msse4.2 -DOPENCV_TRAITS_ENABLE_DEPRECATED)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/cmake)
-include(UseCython)
 
 find_package(catkin REQUIRED COMPONENTS
 	roscpp
