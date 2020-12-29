@@ -54,6 +54,8 @@ defaultSegmentMask = np.array([
     0,
     0
     ], dtype=np.uint8)
+_setSegments = np.zeros((256,), dtype=np.uint8)
+_setSegments[0:defaultSegmentMask.shape[0]] = defaultSegmentMask
 
 
 def RunSegment(frame, raw=False):
@@ -67,19 +69,22 @@ def RunSegment(frame, raw=False):
     end = time()
     print '%30s' % 'SegNet executed in ', str((end-start)*1000), 'ms'
 
-    if (raw==True):
-        return outp['argmax'][0,0]
-
     segmentation_ind = np.squeeze(outp['argmax'])
     segmentation_ind_3ch = np.resize(segmentation_ind, (3, netInputShape[2], netInputShape[3]))
     segmentation_ind_3ch = segmentation_ind_3ch.transpose(1,2,0).astype(np.uint8)
-    segmentation_rgb = cv2.LUT(segmentation_ind_3ch, label_colors)
-    segmentation_rgb = cv2.resize(segmentation_rgb, (origin_shape[1], origin_shape[0]), None, interpolation=cv2.INTER_NEAREST)
-    return segmentation_rgb
+    
+    if (raw==True):
+#     segmentation_rgb = cv2.LUT(segmentation_ind_3ch, label_colors)
+        segmentation_bin = cv2.resize(segmentation_ind_3ch, (origin_shape[1], origin_shape[0]), None, interpolation=cv2.INTER_NEAREST)
+        return segmentation_bin[:,:,0]
+    else:
+        segmentation_rgb = cv2.LUT(segmentation_ind_3ch, label_colors)
+        return cv2.resize(segmentation_rgb, (origin_shape[1], origin_shape[0]), None, interpolation=cv2.INTER_NEAREST)
 
     
 def CreateMask(image):
-    classified = RunSegment(image)
+    classified = RunSegment(image, raw=True)
+    return cv2.LUT(classified, _setSegments)
     
     
 if __name__=="__main__" and _hasSegment==True:
