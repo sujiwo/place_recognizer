@@ -67,7 +67,6 @@ def RunSegment(frame, raw=False):
     start = time()
     outp = classifier.forward_all(data=input_image)
     end = time()
-    print '%30s' % 'SegNet executed in ', str((end-start)*1000), 'ms'
 
     segmentation_ind = np.squeeze(outp['argmax'])
     segmentation_ind_3ch = np.resize(segmentation_ind, (3, netInputShape[2], netInputShape[3]))
