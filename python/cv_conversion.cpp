@@ -83,7 +83,7 @@ type_caster<cv::Mat>::cast(const cv::Mat& mat, return_value_policy, handle defva
 		format = format_descriptor<double>::format();
 		elemsize = sizeof(double);
 	}else{
-		throw std::logic_error("Unsupport type, only support uchar, int32, float");
+		throw std::logic_error("Unsupported type, only support uchar, int32, float");
 	}
 
 	std::vector<size_t> bufferdim;
