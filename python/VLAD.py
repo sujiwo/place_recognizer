@@ -1,3 +1,4 @@
+from __future__ import print_function
 import cv2
 from sklearn.neighbors import KDTree
 from scipy.spatial.distance import hamming
@@ -31,11 +32,11 @@ class VisualDictionary():
         self.descriptors.append(descrs)
     
     def build(self):
-        print("Clustering...")
+        print("Clustering... ", end="")
         self.descriptors = np.array(list(itertools.chain.from_iterable(self.descriptors))).astype(np.float32)
         criteria = (cv2.TERM_CRITERIA_EPS|cv2.TERM_CRITERIA_MAX_ITER, 10, 0.1)
-        compactness, self.bestLabels, self.cluster_centers = cv2.kmeans(self.descriptors, self.numWords, None, criteria, 5, cv2.KMEANS_RANDOM_CENTERS)
-        print("Training done")
+        compactness, self.bestLabels, self.cluster_centers = cv2.kmeans(self.descriptors, self.numWords, None, criteria, 5, cv2.KMEANS_PP_CENTERS)
+        print("Done")
     
     # Outputs the index of nearest center using single feature
     def predict1row(self, descriptors):
