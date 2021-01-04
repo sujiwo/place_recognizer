@@ -8,8 +8,11 @@ import numpy as np
 import itertools
 from numpy import dtype
 from copy import copy
+from twisted.web.test.test_stan import proto
 
 np.seterr(all='raise')
+# Compatibility between Python2 & 3
+_pickleProtocol = 2
 # XXX: Check VLfeat source code
 
 class VisualDictionary():
@@ -35,7 +38,7 @@ class VisualDictionary():
         print("Clustering... ", end="")
         self.descriptors = np.array(list(itertools.chain.from_iterable(self.descriptors))).astype(np.float32)
         criteria = (cv2.TERM_CRITERIA_EPS|cv2.TERM_CRITERIA_MAX_ITER, 10, 0.1)
-        compactness, self.bestLabels, self.cluster_centers = cv2.kmeans(self.descriptors, self.numWords, None, criteria, 5, cv2.KMEANS_PP_CENTERS)
+        compactness, bestLabels, self.cluster_centers = cv2.kmeans(self.descriptors, self.numWords, None, criteria, 5, cv2.KMEANS_PP_CENTERS)
         print("Done")
     
     # Outputs the index of nearest center using single feature
@@ -76,10 +79,9 @@ class VisualDictionary():
     
     def save(self, path):
         fd = open(path, "wb")
-        pickle.dump(self.numWords, fd)
-        pickle.dump(self.numFeatures, fd)
-        pickle.dump(self.bestLabels, fd)
-        pickle.dump(self.cluster_centers, fd)
+        pickle.dump(self.numWords, fd, protocol=_pickleProtocol)
+        pickle.dump(self.numFeatures, fd, protocol=_pickleProtocol)
+        pickle.dump(self.cluster_centers, fd, protocol=_pickleProtocol)
         fd.close()
         
     @staticmethod
@@ -96,11 +98,20 @@ class VisualDictionary():
         vd = VisualDictionary()
         vd.numWords = pickle.load(fd)
         vd.numFeatures = pickle.load(fd)
-        vd.featureDetector = cv2.ORB_create(vd.numFeatures)
-        vd.bestLabels = pickle.load(fd)
         vd.cluster_centers = pickle.load(fd)
+        vd.featureDetector = cv2.ORB_create(vd.numFeatures)
         fd.close()
         return vd
+    
+    def __getstate__(self):
+        dct = self.__dict__.copy()
+        if dct.has_key("featureDetector"): del(dct["featureDetector"])
+        if dct.has_key("descriptors"): del(dct["descriptors"])
+        return dct
+    
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.featureDetector = cv2.ORB_create(self.numFeatures)
     
     
 class VisualDictionaryBinaryFeature(VisualDictionary):
@@ -242,11 +253,11 @@ class VLAD2():
         """
         fd = open(path, "wb")
         fd.write('VLAD')
-        pickle.dump(self.leafSize, fd)
-        pickle.dump(self.tree, fd)
-        pickle.dump(self.imageIds, fd)
-        pickle.dump(self.descriptors, fd)
-        pickle.dump(self.dictionary.cluster_centers, fd)
+        pickle.dump(self.leafSize, fd, protocol=_pickleProtocol)
+        pickle.dump(self.tree, fd, protocol=_pickleProtocol)
+        pickle.dump(self.imageIds, fd, protocol=_pickleProtocol)
+        pickle.dump(self.descriptors, fd, protocol=_pickleProtocol)
+        pickle.dump(self.dictionary.cluster_centers, fd, protocol=_pickleProtocol)
         fd.close()
     
     @staticmethod
