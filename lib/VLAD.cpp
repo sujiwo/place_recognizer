@@ -58,6 +58,14 @@ VisualDictionary::predict1row(const cv::Mat &descriptor) const
 	}
 	return min_element(distances.begin(), distances.end()) - distances.begin();
 */
+	assert(descriptor.rows==1 && descriptor.cols==centers.cols);
+
+	cv::Mat descfloat;
+	if (descriptor.type()!=CV_32FC1)
+	descfloat = descriptor.convertTo(descfloat, CV_32FC1);
+	else descfloat = descriptor;
+
+
 }
 
 
