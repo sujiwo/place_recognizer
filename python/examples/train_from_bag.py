@@ -28,7 +28,19 @@ def main():
     _parser.add_argument("--stop", type=float, metavar="second", default=-1, help="Stop mapping at offset from 0")
     cmdArgs = _parser.parse_args()
     
-    trainBag = ImageBag(cmdArgs.bagfile, cmdArgs.topic)
+    # Inspect the bag file
+    allBagConns = RandomAccessBag.getAllConnections(cmdArgs.bagfile)
+    trajectorySrc = None
+    for bg in allBagConns:
+        
+        if bg.topic()==cmdArgs.topic:
+            trainBag = ImageBag(cmdArgs.bagfile, cmdArgs.topic)
+            print("Using {} as image source".format(trainBag.topic()))
+            
+        elif bg.type() in GeographicTrajectory.supportedMsgTypes:
+            trajectorySrc = GeographicTrajectory(bg)
+            print("Using {} as trajectory source".format(bg.topic()))
+    
     orb = cv2.ORB_create(6000)
 
     mapper = None
@@ -45,19 +57,29 @@ def main():
     
     # Not taking all images
     sampleList = trainBag.desample(cmdArgs.desample, True, cmdArgs.start, cmdArgs.stop)
+    timestamps = [trainBag.messageTime(s) for s in sampleList]
+    trajectorySrc = trajectorySrc.buildFromTimestamps(timestamps)
     
+    print("Training begin")
+    i = 0
     for s in tqdm(sampleList):
         # Need smaller size
         img = cv2.resize(trainBag[s], (0,0), None, fx=cmdArgs.resize, fy=cmdArgs.resize)
         # XXX: should have taken Segmentation results here
         k, d = orb.detectAndCompute(img, None)
-        mapper.addImage(s, d, k)
+        timestamp = trainBag.messageTime(s)
+        if (cmdArgs.method=='vlad'):
+            pose = trajectorySrc.coordinates[i]
+            mapper.addImage(pose, d, k)
+        else:
+            mapper.addImage(s, d, k)
         cv2.imshow("Current Image", img)
         cv2.waitKey(1)
+        i += 1
     
     mapper.stopTrain()
     mapper.save(cmdArgs.output)
-    print("Done")    
+    print("Training Done")    
 
 
 if __name__ == "__main__":

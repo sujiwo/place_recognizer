@@ -89,10 +89,10 @@ install(
 		LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 		RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION} )
 
-add_executable(bkmeans_test
-	nodes/bkmeans_test.cpp)
-target_link_libraries(bkmeans_test
-	place_recognizer)
+#add_executable(bkmeans_test
+#	nodes/bkmeans_test.cpp)
+#target_link_libraries(bkmeans_test
+#	place_recognizer)
 
 
 if(rosbag_viewer_FOUND)

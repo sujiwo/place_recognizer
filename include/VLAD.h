@@ -21,19 +21,11 @@ namespace PlaceRecognizer {
 
 struct VisualDictionary
 {
-	enum ClusteringMethod {
-		KMAJORITY,
-		KMEDOID
-	};
-
-	VisualDictionary(uint _numWords=256, ClusteringMethod m=KMAJORITY) :
-		numWords(_numWords),
-		method(m)
+	VisualDictionary(uint _numWords=256) :
+		numWords(_numWords)
 	{}
 
 	bool build (cv::Mat &descriptors);
-
-	bool rebuild (cv::Mat &additional_descriptors);
 
 	/*
 	 * Returns a list of centroids for a set of descriptors
@@ -50,7 +42,6 @@ struct VisualDictionary
 protected:
 	uint numWords;
 	cv::Mat centers;
-	ClusteringMethod method;
 
 	uint predict1row(const cv::Mat &descriptor) const;
 };

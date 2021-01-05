@@ -5,9 +5,9 @@
  *      Author: sujiwo
  */
 
+
 #include <algorithm>
 #include "VLAD.h"
-#include "BOWKmajorityTrainer.h"
 
 
 using namespace std;
@@ -18,33 +18,38 @@ namespace PlaceRecognizer {
 bool
 VisualDictionary::build (cv::Mat &descriptors)
 {
-	cv::BOWKmajorityTrainer trainer(numWords);
-	centers = trainer.cluster(descriptors);
-	return (centers.rows==numWords);
+	auto term = cv::TermCriteria(cv::TermCriteria::MAX_ITER+cv::TermCriteria::EPS, 10, 0.1);
+	cv::Mat bestLabels;
+	auto d = cv::kmeans(
+		descriptors,
+		numWords,
+		bestLabels,
+		term,
+		5,
+		cv::KMEANS_PP_CENTERS,
+		centers);
+	return true;
 }
 
-bool
-VisualDictionary::rebuild (cv::Mat &add_descriptors)
-{
-	// XXX: Not implemented
-	return false;
-}
 
 std::vector<uint>
 VisualDictionary::predict (const cv::Mat &imageDescriptors)
 const
 {
+/*
 	vector<uint> prd(imageDescriptors.rows);
 	for (int i=0; i<imageDescriptors.rows; ++i) {
 		auto c = predict1row(imageDescriptors.row(i));
 		prd[i] = c;
 	}
 	return prd;
+*/
 }
 
 uint
 VisualDictionary::predict1row(const cv::Mat &descriptor) const
 {
+/*
 	assert(descriptor.type()==CV_8UC1);
 	assert(descriptor.rows==1 and descriptor.cols==centers.cols);
 	vector<uint> distances(numWords);
@@ -52,6 +57,7 @@ VisualDictionary::predict1row(const cv::Mat &descriptor) const
 		distances[i] = cv::norm(descriptor, centers.row(i), cv::NormTypes::NORM_HAMMING);
 	}
 	return min_element(distances.begin(), distances.end()) - distances.begin();
+*/
 }
 
 

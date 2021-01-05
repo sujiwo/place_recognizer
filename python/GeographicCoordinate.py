@@ -29,6 +29,8 @@ class GeographicTrajectory:
         Frame ID of coordinate sensor
     """
     
+    supportedMsgTypes = ['sensor_msgs/NavSatFix', 'nmea_msgs/Sentence']
+    
     def __init__ (self, randomBag=None, eastingShift=0.0, northingShift=0.0, heightShift=0.0):
         if (randomBag is None):
             self.timestamps = []
