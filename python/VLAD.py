@@ -274,9 +274,7 @@ class VLAD2():
         if (fd.read(4) != "VLAD"):
             raise VLADLoadError("Not a VLAD map file")
         mvlad.leafSize = pickle.load(fd)
-        print("Tree 1")
         mvlad.tree = pickle.load(fd)
-        print("Tree 2")
         mvlad.placeIds = pickle.load(fd)
         mvlad.descriptors = pickle.load(fd)
 #         Cluster centers
@@ -313,6 +311,7 @@ class VLAD2():
         @param keypoints: list of keypoints
         """
         if (self.newDatasetDescriptors is None):
+            self.dtype = descriptors.dtype
             self.newDatasetDescriptors = np.zeros((0,descriptors.shape[1]), dtype=descriptors.dtype)
         curPtr = self.newDatasetDescriptors.shape[0]
         self.trainDescriptorPtr.append((curPtr, curPtr+descriptors.shape[0]))
@@ -324,6 +323,11 @@ class VLAD2():
         
     # query() should return cartesian coordinates
     def query(self, imgDescriptors, numOfImages=5):
+        """
+        Search VLAD database for set of image descriptors
+        @param imgDescriptors: numpy.ndarray    Image descriptors generated from feature detector
+        @param numOfImages: int    Number of images returned from database
+        """
         queryDescriptors = VLADDescriptor(imgDescriptors, self.dictionary).flattened().reshape(1,-1)
         dist, idx = self.tree.query(queryDescriptors, numOfImages)
         
