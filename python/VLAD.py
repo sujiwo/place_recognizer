@@ -241,7 +241,7 @@ class VLAD2():
         else:
             self.dictionary = None
         self.descriptors = None
-        self.imageIds = []
+        self.placeIds = []
         
     def save(self, path):
         """
@@ -255,7 +255,7 @@ class VLAD2():
         fd.write('VLAD')
         pickle.dump(self.leafSize, fd, protocol=_pickleProtocol)
         pickle.dump(self.tree, fd, protocol=_pickleProtocol)
-        pickle.dump(self.imageIds, fd, protocol=_pickleProtocol)
+        pickle.dump(self.placeIds, fd, protocol=_pickleProtocol)
         pickle.dump(self.descriptors, fd, protocol=_pickleProtocol)
         pickle.dump(self.dictionary.cluster_centers, fd, protocol=_pickleProtocol)
         fd.close()
@@ -277,7 +277,7 @@ class VLAD2():
         print("Tree 1")
         mvlad.tree = pickle.load(fd)
         print("Tree 2")
-        mvlad.imageIds = pickle.load(fd)
+        mvlad.placeIds = pickle.load(fd)
         mvlad.descriptors = pickle.load(fd)
 #         Cluster centers
         cc = pickle.load(fd)
@@ -302,13 +302,13 @@ class VLAD2():
     # XXX: Insert cartesian coordinate of the image when adding
     # imageId is actually vestigial data that can be replaced with other datatypes which will be
     # returned upon query, eg. geographic coordinates
-    def addImage(self, imageId, descriptors, keypoints=None):
+    def addImage(self, placeId, descriptors, keypoints=None):
         """
         Add image descriptors acquired from a single image during a training session
         
         Parameters
         ----------
-        @param imageId: int, Image Id. Can be numbering of image (start from 0) at the original bag
+        @param placeId: int, Image Id. Can be numbering of image (start from 0) at the original bag
         @param descriptors: numpy.ndarray. Image descriptors generated from feature detector
         @param keypoints: list of keypoints
         """
@@ -317,7 +317,10 @@ class VLAD2():
         curPtr = self.newDatasetDescriptors.shape[0]
         self.trainDescriptorPtr.append((curPtr, curPtr+descriptors.shape[0]))
         self.newDatasetDescriptors = np.append(self.newDatasetDescriptors, descriptors.astype(VisualDictionary.dtype), axis=0)
-        self.imageIds.append(imageId)
+        self.placeIds.append(placeId)
+        
+    def getLastPlaceId(self):
+        return self.placeIds[-1]
         
     # query() should return cartesian coordinates
     def query(self, imgDescriptors, numOfImages=5):
@@ -326,7 +329,7 @@ class VLAD2():
         
         # We got the candidates. Let's check each of them
         
-        return [self.imageIds[i] for i in idx[0]]
+        return [self.placeIds[i] for i in idx[0]]
 
     @staticmethod
     def normalizeVlad(vDescriptors):
