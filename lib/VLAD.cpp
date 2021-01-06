@@ -63,6 +63,14 @@ struct VLADDescriptor
 };
 
 
+VisualDictionary::VisualDictionary(const cv::Mat& precomputedCenters)
+{
+	assert(precomputedCenters.type()==CV_32FC1);
+	centers = precomputedCenters.clone();
+	numWords = centers.rows;
+}
+
+
 bool
 VisualDictionary::build (cv::Mat &descriptors)
 {

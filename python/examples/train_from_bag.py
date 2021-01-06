@@ -50,9 +50,16 @@ def main():
             print("Dictionary for vlad must be specified")
             exit(-1)
         visdict = VisualDictionary.load(cmdArgs.dictionary)
-        mapper = VLAD2(visdict)
+        if cmdArgs.load!="":
+            mapper = VLAD2.load(cmdArgs.load)
+            print("VLAD Map loaded")
+        else:
+            mapper = VLAD2(visdict)
     elif (cmdArgs.method=="ibow"):
         mapper = IncrementalBoW()
+        if cmdArgs.load!="":
+            mapper.load(cmdArgs.load)
+            print("IBoW map loaded")
     mapper.initTrain()
     
     # Not taking all images

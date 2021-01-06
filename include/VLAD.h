@@ -25,6 +25,8 @@ struct VisualDictionary
 		numWords(_numWords)
 	{}
 
+	VisualDictionary(const cv::Mat& precomputedCenters);
+
 	bool build (cv::Mat &descriptors);
 
 	/*

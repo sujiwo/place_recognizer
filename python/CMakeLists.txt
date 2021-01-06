@@ -69,6 +69,7 @@ catkin_install_python(
 		examples/query_from_bag.py
 		examples/train_from_bag.py
 		examples/server
+		examples/pose_from_utm.py
 	DESTINATION
 		${CATKIN_PACKAGE_BIN_DESTINATION} )
 		
