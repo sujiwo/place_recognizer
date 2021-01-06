@@ -33,11 +33,14 @@ struct VisualDictionary
 	std::vector<uint>
 	predict(const cv::Mat &imageDescriptors) const;
 
+	void
+	predict(const cv::Mat &imageDescriptors, cv::Mat &out) const;
+
 	/*
 	 * Returns descriptors for the centroids
 	 */
 	inline cv::Mat getCenters() const
-	{ return centers.clone(); }
+	{ return centers; }
 
 protected:
 	uint numWords;

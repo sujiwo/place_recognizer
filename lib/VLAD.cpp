@@ -6,6 +6,7 @@
  */
 
 
+#include <vector>
 #include <algorithm>
 #include "VLAD.h"
 
@@ -14,6 +15,53 @@ using namespace std;
 
 
 namespace PlaceRecognizer {
+
+
+struct VLADDescriptor
+{
+	VLADDescriptor(const cv::Mat &imageDescriptors, const VisualDictionary &dict)
+	{ compute(imageDescriptors, dict); }
+
+	void compute(const cv::Mat &imageDescriptors, const VisualDictionary &dict)
+	{
+		cv::Mat predictedLabels;
+		dict.predict(imageDescriptors, predictedLabels);
+		auto centers = dict.getCenters();
+		int k = centers.rows,
+			m = imageDescriptors.rows,
+			d = imageDescriptors.cols;
+		descriptors = cv::Mat::zeros(k, d, CV_32FC1);
+		centroid_counters.reserve(k);
+
+		for (int i=0; i<k; ++k) {
+			centroid_counters[i] = cv::countNonZero(predictedLabels==i);
+			if (centroid_counters[i] > 0) {
+//				descriptors
+			}
+		}
+
+
+	}
+
+	cv::Mat normalized() const
+	{
+
+	}
+
+	cv::Mat flattened() const
+	{
+
+	}
+
+	void adaptNewCentroids(const VisualDictionary &newDict, const cv::Mat &oldCentroids)
+	{
+
+	}
+
+	cv::Mat descriptors;
+	vector<uint> centroid_counters;
+};
+
 
 bool
 VisualDictionary::build (cv::Mat &descriptors)
@@ -36,36 +84,39 @@ std::vector<uint>
 VisualDictionary::predict (const cv::Mat &imageDescriptors)
 const
 {
-/*
 	vector<uint> prd(imageDescriptors.rows);
 	for (int i=0; i<imageDescriptors.rows; ++i) {
 		auto c = predict1row(imageDescriptors.row(i));
 		prd[i] = c;
 	}
 	return prd;
-*/
 }
+
+void
+VisualDictionary::predict(const cv::Mat &imageDescriptors, cv::Mat &prd) const
+{
+	prd = cv::Mat(1, imageDescriptors.rows, CV_32SC1);
+	for (int i=0; i<imageDescriptors.rows; ++i) {
+		auto c = predict1row(imageDescriptors.row(i));
+		prd.at<int>(0,i) = c;
+	}
+}
+
 
 uint
 VisualDictionary::predict1row(const cv::Mat &descriptor) const
 {
-/*
-	assert(descriptor.type()==CV_8UC1);
-	assert(descriptor.rows==1 and descriptor.cols==centers.cols);
-	vector<uint> distances(numWords);
-	for (int i=0; i<numWords; i++) {
-		distances[i] = cv::norm(descriptor, centers.row(i), cv::NormTypes::NORM_HAMMING);
-	}
-	return min_element(distances.begin(), distances.end()) - distances.begin();
-*/
 	assert(descriptor.rows==1 && descriptor.cols==centers.cols);
 
 	cv::Mat descfloat;
 	if (descriptor.type()!=CV_32FC1)
-	descfloat = descriptor.convertTo(descfloat, CV_32FC1);
+		descriptor.convertTo(descfloat, CV_32FC1);
 	else descfloat = descriptor;
 
-
+	vector<double> norms2(numWords);
+	for (int i=0; i<numWords; ++i)
+		norms2[i] = cv::norm(centers.row(i) - descfloat);
+	return min_element(norms2.begin(), norms2.end()) - norms2.begin();
 }
 
 
