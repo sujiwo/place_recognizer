@@ -311,11 +311,10 @@ class VLAD2():
         @param keypoints: list of keypoints
         """
         if (self.newDatasetDescriptors is None):
-            self.dtype = descriptors.dtype
-            self.newDatasetDescriptors = np.zeros((0,descriptors.shape[1]), dtype=descriptors.dtype)
-        curPtr = self.newDatasetDescriptors.shape[0]
+            self.newDatasetDescriptors = []
+        curPtr = len(self.newDatasetDescriptors)
         self.trainDescriptorPtr.append((curPtr, curPtr+descriptors.shape[0]))
-        self.newDatasetDescriptors = np.append(self.newDatasetDescriptors, descriptors.astype(VisualDictionary.dtype), axis=0)
+        self.newDatasetDescriptors.extend(descriptors)
         self.placeIds.append(placeId)
         
     def getLastPlaceId(self):
@@ -364,6 +363,7 @@ class VLAD2():
             hasTrained = False
         print("Cluster center adaptation")
         oldDictionary = copy(self.dictionary.cluster_centers)
+        self.newDatasetDescriptors = np.array(self.newDatasetDescriptors, dtype=self.dictionary.cluster_centers.dtype)
         self.dictionary.adapt(self.newDatasetDescriptors)
         
         if hasTrained==True:
