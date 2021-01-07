@@ -1,6 +1,12 @@
 #!/usr/bin/env python2
 """
 This script trains a place_recognizer map file from ROS image topic
+
+Notes on deployment:
+Both mapping methods may eat significant amount of time per frame;
+it is recommended to use message throttling tools (eg. topic_tools)
+to reduce number of message coming into mapping node, and/or playing
+the bag with reduced frequency.
 """
 import rospy
 import time
@@ -9,19 +15,9 @@ import cv2
 from argparse import ArgumentParser, ArgumentError
 from sensor_msgs.msg import Image, CompressedImage
 from geometry_msgs.msg import PoseStamped, PointStamped
-from place_recognizer import VLAD2, VisualDictionary, IncrementalBoW
+from place_recognizer import VLAD2, VisualDictionary, IncrementalBoW, ImageSubscriber
 
 
-class ImageSubscriber(rospy.Subscriber):
-    """
-    Emulates image_transport for Python
-    XXX: This class may have to be moved to a distinct module
-    """
-    def __init__(self, imageTopic, _callback):
-        pass
-    
-    def callback(self, msg):
-        pass
 
 
 class RosTrainer:
@@ -30,7 +26,7 @@ class RosTrainer:
         self.mapfile_output = mapfile_output
         
         # Prepare the map
-        if mapfile_load is not None:
+        if mapfile_load!='':
             if method=="vlad":
                 self.mapper = VLAD2.load(mapfile_load)
                 print("VLAD file loaded")
@@ -46,14 +42,29 @@ class RosTrainer:
         self.extractor = cv2.ORB_create(6000)
                 
         # Prepare ROS subsystem
-        self.imgSubscriber = rospy.Subscriber(image_topic, Image, self.imageCallback)
+        rospy.init_node("place_recognizer_trainer", disable_signals=True)
+        self.imgSubscriber = ImageSubscriber(image_topic, self.imageCallback)
+        
+        self.currentPosition = None
+        if (position_topic!=''):
+            self.positionSub = rospy.Subscriber(position_topic, PointStamped, self.positionCallback)
         
         
-    def imageCallback(self, msg):
+    def imageCallback(self, image_message):
+        keypoints, descriptors = self.extractor.detectAndCompute(image_message, None)
+        cv2.imshow('image', image_message)
+        cv2.waitKey(1)
+
         pass
     
     def positionCallback(self, posMsg):
         pass
+    
+    def stopTraining(self):
+        self.imgSubscriber.unregister()
+        print("Saving...")
+#         self.mapper.save(self.mapfile_output)
+        
 
 def main():
     
@@ -64,17 +75,20 @@ def main():
     parser.add_argument("--method", type=str, choices=['vlad', 'ibow'], default='vlad', help="Choices of method for training")
     parser.add_argument("--resize", type=float, metavar="ratio", default=0.53333, help="Rescale image size with this ratio")
     parser.add_argument("--load", type=str, metavar="path", default="", help="Load previous map for retrain")
-    parser.add_argument("--position", type=str, metavar="pos_topic", help="Topic for position sources")
+    parser.add_argument("--position", type=str, metavar="pos_topic", default='', help="Topic for position sources")
     
-    parser.parse_args()
+    cmdArgs = parser.parse_args()
     
-    while True:
-        try:
-            time.sleep(0.5)
-            print("Press CTRL+C to quit")
-        except KeyboardInterrupt:
-            break
+    trainer = RosTrainer(cmdArgs.topic, cmdArgs.position, cmdArgs.method, cmdArgs.output, cmdArgs.load, cmdArgs.dictionary)
     
+    try:
+        print("Press CTRL+C to quit")
+        rospy.spin()
+    except KeyboardInterrupt:
+        print("Break pressed")
+        print("Done")
+        
+    trainer.stopTraining()    
     print("Exiting")
     exit(0)    
 

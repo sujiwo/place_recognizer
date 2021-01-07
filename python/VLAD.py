@@ -263,34 +263,50 @@ class VLAD2():
         self.descriptors = None
         self.placeIds = []
         
-    def save(self, path):
+    @staticmethod
+    def is_file_str(filename, open_mode):
+        if isinstance(filename, str):
+            fd = open(filename, open_mode)
+        elif isinstance(filename, file):
+            fd = filename
+        else:
+            raise ValueError("Supplied file name is neither path nor file descriptor")
+        return fd
+        
+    def save(self, filetarget):
         """
         Save the map to disk
         
         Parameters
         ----------
-        @param path: file name to save map to
+        @param filetarget: file name to save map to, or file descriptor from open()
         """
-        fd = open(path, "wb")
+        fd = VLAD2.is_file_str(filetarget, "wb")
+        fd.seek(0)
+            
         fd.write('VLAD')
         pickle.dump(self.leafSize, fd, protocol=_pickleProtocol)
         pickle.dump(self.tree, fd, protocol=_pickleProtocol)
         pickle.dump(self.placeIds, fd, protocol=_pickleProtocol)
         pickle.dump(self.descriptors, fd, protocol=_pickleProtocol)
         pickle.dump(self.dictionary.cluster_centers, fd, protocol=_pickleProtocol)
-        fd.close()
+        
+        if isinstance(filetarget, str):
+            fd.close()
     
     @staticmethod
-    def load(path):
+    def load(filesource):
         """
         Load a map from disk
         
         Parameters
         ----------
-        @param path: file name to load map from
+        @param filesource: file name to load map from
         """
         mvlad = VLAD2(None, True)
-        fd = open(path, "rb")
+        fd = VLAD2.is_file_str(filesource, "rb")
+        fd.seek(0)
+            
         if (fd.read(4) != "VLAD"):
             raise VLADLoadError("Not a VLAD map file")
         mvlad.leafSize = pickle.load(fd)
@@ -301,7 +317,8 @@ class VLAD2():
         cc = pickle.load(fd)
         mvlad.dictionary = VisualDictionary.fromClusterCenters(cc)
         
-        fd.close()
+        if isinstance(filesource, str):
+            fd.close()
         return mvlad
     
     def initTrain(self, leafSize=40):
@@ -338,7 +355,10 @@ class VLAD2():
         self.placeIds.append(placeId)
         
     def getLastPlaceId(self):
-        return self.placeIds[-1]
+        if (len(self.placeIds)==0):
+            return 0
+        else:
+            return self.placeIds[-1]
         
     # query() should return cartesian coordinates
     def query(self, imgDescriptors, numOfImages=5):
@@ -400,6 +420,7 @@ class VLAD2():
         D = self.flatNormalDescriptors()
         # XXX: Switch to KDTree ?
         # Implementation choices: SKlearn vs OpenCV
+        print("Build Index Tree")
         self.tree = KDTree(D, leaf_size=self.leafSize)
         
     
