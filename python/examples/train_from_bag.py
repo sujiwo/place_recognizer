@@ -6,7 +6,6 @@ Data source comes from a ROS Bag
 """
 
 from RandomAccessBag import RandomAccessBag, ImageBag
-from multiprocessing import Lock
 import cv2
 import sys
 from place_recognizer import VisualDictionary, VLAD2, IncrementalBoW, GeographicTrajectory

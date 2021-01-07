@@ -53,6 +53,10 @@ class VisualDictionary():
         return np.argmin(dist)
     
     def predict(self, X):
+        """
+        Search nearest cluster centers for each row of X
+        @param X: numpy.ndarray    Image descriptors
+        """
         indices = []
         for r in range(X.shape[0]):
             ix = self.predict1row(X[r,:])
@@ -60,6 +64,12 @@ class VisualDictionary():
         return np.array(indices, dtype=np.int)
     
     def adapt(self, newDescriptors, dryRun=False):
+        """
+        Adjust cluster centers to new set of descriptors.
+        @param newDescriptors: numpy.ndarray    Set of new descriptors
+        @param dryRun: bool                     If True, returns new cluster center but do not change it
+        @return: numpy.ndarray or None
+        """
         assert(newDescriptors.dtype==self.cluster_centers.dtype)
         descCenters = self.predict(newDescriptors)
         descSums = np.zeros(self.cluster_centers.shape, dtype=np.float64)
@@ -78,6 +88,9 @@ class VisualDictionary():
             self.cluster_centers = descSums
     
     def save(self, path):
+        """
+        Save Visual dictionary to file
+        """
         fd = open(path, "wb")
         pickle.dump(self.numWords, fd, protocol=_pickleProtocol)
         pickle.dump(self.numFeatures, fd, protocol=_pickleProtocol)
@@ -86,14 +99,21 @@ class VisualDictionary():
         
     @staticmethod
     def fromClusterCenters(_cluster_centers):
+        """
+        Create a VisualDictionary from precomputed cluster centers
+        @param _cluster_centers: numpy.ndarray
+        @return: VisualDictionary
+        """
         vd = VisualDictionary()
         vd.numWords = _cluster_centers.shape[0]
         vd.cluster_centers = _cluster_centers
         return vd
         
-    
     @staticmethod
     def load(path):
+        """
+        Load dictionary from file
+        """
         fd = open(path, "rb")
         vd = VisualDictionary()
         vd.numWords = pickle.load(fd)
