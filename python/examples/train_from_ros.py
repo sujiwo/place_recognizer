@@ -5,10 +5,23 @@ This script trains a place_recognizer map file from ROS image topic
 import rospy
 import time
 import sys
+import cv2
 from argparse import ArgumentParser, ArgumentError
 from sensor_msgs.msg import Image, CompressedImage
 from geometry_msgs.msg import PoseStamped, PointStamped
 from place_recognizer import VLAD2, VisualDictionary, IncrementalBoW
+
+
+class ImageSubscriber(rospy.Subscriber):
+    """
+    Emulates image_transport for Python
+    XXX: This class may have to be moved to a distinct module
+    """
+    def __init__(self, imageTopic, _callback):
+        pass
+    
+    def callback(self, msg):
+        pass
 
 
 class RosTrainer:
@@ -30,6 +43,7 @@ class RosTrainer:
                 self.mapper = VLAD2(vdict)
             elif method=="ibow":
                 self.mapper = IncrementalBoW()
+        self.extractor = cv2.ORB_create(6000)
                 
         # Prepare ROS subsystem
         self.imgSubscriber = rospy.Subscriber(image_topic, Image, self.imageCallback)
