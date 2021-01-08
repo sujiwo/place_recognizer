@@ -524,7 +524,10 @@ public:
 	}
 
 	void saveToDisk(const std::string &f) const;
+	void saveToDisk(std::ostream &outfd) const;
+
 	void loadFromDisk(const std::string &f);
+	void loadFromDisk(std::istream &infd);
 
 	std::map<imageId,uint64> keyframeIdToBag;
 

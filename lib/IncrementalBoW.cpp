@@ -905,11 +905,16 @@ IncrementalBoW::saveToDisk(const std::string &f) const
 	indexFileFd.open(f, fstream::out | fstream::trunc);
 	if (!indexFileFd.is_open())
 		throw runtime_error("Unable to create map file");
-	boost::archive::binary_oarchive indexStore(indexFileFd);
-
-	indexStore << *this;
-
+	saveToDisk(indexFileFd);
 	indexFileFd.close();
+}
+
+
+void
+IncrementalBoW::saveToDisk(std::ostream &outfd) const
+{
+	boost::archive::binary_oarchive indexStore(outfd);
+	indexStore << *this;
 }
 
 
@@ -920,11 +925,16 @@ IncrementalBoW::loadFromDisk(const std::string &f)
 	indexFileFd.open(f, fstream::in);
 	if (!indexFileFd.is_open())
 		throw runtime_error("Unable to create map file");
-	boost::archive::binary_iarchive indexStore(indexFileFd);
-
-	indexStore >> *this;
-
+	loadFromDisk(indexFileFd);
 	indexFileFd.close();
+}
+
+
+void
+IncrementalBoW::loadFromDisk(std::istream &infd)
+{
+	boost::archive::binary_iarchive indexStore(infd);
+	indexStore >> *this;
 }
 
 
