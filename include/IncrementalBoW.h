@@ -16,6 +16,7 @@
 #include <queue>
 #include <string>
 #include <list>
+#include <array>
 #include <utility>
 #include <opencv2/core.hpp>
 #include <opencv2/core/hal/hal.hpp>
@@ -447,6 +448,16 @@ struct ImageMatch
 };
 
 
+struct GeoPosition: public std::array<double,3>
+{
+	GeoPosition(const double &d1, const double &d2, const double &d3)
+	{ at(0)=d1; at(1)=d2; at(2)=d3; }
+
+	GeoPosition()
+	{GeoPosition(0,0,0);}
+};
+
+
 class IncrementalBoW
 {
 public:
@@ -530,6 +541,8 @@ private:
 
 	// Minimum times a feature has shown up in multiple times before being discarded
 	unsigned min_feat_apps_;
+
+	std::vector<GeoPosition> imageData;
 
 	std::unordered_map<BinaryDescriptor::Ptr, std::vector<InvIndexItem> > inv_index_;
 	std::unordered_map<BinaryDescriptor::Ptr, uint64_t> desc_to_id_;
