@@ -1,187 +1,31 @@
 /*
- * binding.cpp
+ * binding2.cpp
  *
- *  Created on: Nov 26, 2020
+ *  Created on: Dec 24, 2020
  *      Author: sujiwo
  */
 
 #include <iostream>
-#include <boost/python.hpp>
-#include <boost/python/numpy.hpp>
+#include <vector>
 #include "IncrementalBoW.h"
-#include "BKMeans.h"
-#include "VLAD.h"
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <pybind11/stl.h>
+#include "cv_conversion.h"
 
+#include <opencv2/core.hpp>
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include "numpy/ndarrayobject.h"
 
-
-using namespace boost::python;
-namespace py=boost::python;
-namespace np=boost::python::numpy;
 using namespace std;
+namespace py = pybind11;
+using namespace pybind11::literals;
 
 
-#define ListSize(l) ((PyListObject*)l.ptr())->ob_size
-
-/*
- * Helper function to convert from NDArray to OpenCV Mat
- */
-cv::Mat convertNdArray(np::ndarray &A)
+void module_init()
 {
-	auto ndims = A.get_nd();
-	auto shape = A.get_shape();
-	auto dtype = A.get_dtype();
-	auto strides = A.get_strides();
-
-	cv::Mat M;
-
-	bool needcopy = false;
-
-	const int rows = shape[0],
-			cols = ndims>=2 ? shape[1] : 1,
-					channel = ndims==3 ? shape[2] : 1;
-
-	char* st = extract<char*>(str(dtype));
-	int type;
-	if (strcmp(st,"float64")==0)       type=CV_64F;
-	else if (strcmp(st, "float32")==0) type=CV_32F;
-	else if (strcmp(st, "int32")==0)   type=CV_32S;
-	else if (strcmp(st, "int16")==0)   type=CV_16S;
-	else if (strcmp(st, "uint16")==0)  type=CV_16U;
-	else if (strcmp(st, "int8")==0)    type=CV_8S;
-	else if (strcmp(st, "uint8")==0)   type=CV_8U;
-	else throw runtime_error("Unsupported datatype");
-
-	int elemsize = CV_ELEM_SIZE1(type),
-			cvtype = CV_MAKETYPE(type, channel);
-	bool ismultichannel = ndims == 3 && shape[2] <= CV_CN_MAX;
-
-	for( int i = ndims-1; i >= 0 && !needcopy; i-- )
-	{
-		// these checks handle cases of
-		//  a) multi-dimensional (ndims > 2) arrays, as well as simpler 1- and 2-dimensional cases
-		//  b) transposed arrays, where _strides[] elements go in non-descending order
-		//  c) flipped arrays, where some of _strides[] elements are negative
-		// the _sizes[i] > 1 is needed to avoid spurious copies when NPY_RELAXED_STRIDES is set
-		if( (i == ndims-1 && shape[i] > 1 && (size_t)strides[i] != elemsize) ||
-				(i < ndims-1 && shape[i] > 1 && strides[i] < strides[i+1]) )
-			needcopy = true;
-	}
-	if( ismultichannel && strides[1] != (npy_intp)elemsize*shape[2] )
-		needcopy = true;
-
-	if (needcopy) {
-		// Arrgh! not handled
-		throw runtime_error("Non-continuous array can't be handled yet");
-	}
-	else {
-		M = cv::Mat(rows, cols, cvtype, A.get_data());
-		M.addref();
-	}
-
-	return M;
-}
-
-
-np::ndarray convertMat(cv::Mat &M)
-{
-//	np::ndarray N = np::from_data(M.data)
-	int n_dims = (M.channels()==1 ? 2 : 3);
-	vector<uint> shape {uint(M.rows), uint(M.cols), uint(M.channels())};
-	if (M.channels()==1)
-		shape = {shape[0], shape[1]};
-	int matType = M.type() & CV_MAT_DEPTH_MASK,
-		chan    = 1 + (M.type() >> CV_CN_SHIFT);
-
-	np::dtype dt = np::dtype::get_builtin<uint8_t>();
-	if (matType==cv::DataType<uint8_t>::type)
-		;
-	else if (matType==cv::DataType<int>::type)
-		dt = np::dtype::get_builtin<int>();
-	else if (matType==cv::DataType<float>::type)
-		dt = np::dtype::get_builtin<float>();
-	else if (matType==cv::DataType<double>::type)
-		dt = np::dtype::get_builtin<double>();
-	else throw runtime_error("Unsupported Mat type");
-	vector<uint> strides {uint(M.channels()*M.cols*M.elemSize1()), uint(M.channels()*M.elemSize1()), uint(M.elemSize1())};
-	if (M.channels()==1)
-		strides = {strides[0], strides[1]};
-	return np::from_data(M.data, dt, shape, strides, py::object());
-}
-
-
-cv::KeyPoint convertKeyPoint(object &O)
-{
-	assert(string(extract<string>(O.attr("__class__")))=="cv2.KeyPoint");
-	cv::KeyPoint kp;
-
-	kp.pt.x = extract<float>(O.attr("pt")[0]);
-	kp.pt.y = extract<float>(O.attr("pt")[1]);
-	kp.angle = extract<float>(O.attr("angle"));
-	kp.class_id = extract<int>(O.attr("class_id"));
-	kp.octave = extract<int>(O.attr("octave"));
-	kp.response = extract<float>(O.attr("response"));
-	kp.size = extract<float>(O.attr("size"));
-
-	return kp;
-}
-
-
-vector<cv::KeyPoint> convertKeyPointList(py::list &L)
-{
-	vector<cv::KeyPoint> vKp;
-	uint listsz=ListSize(L);
-	for (uint i=0; i<listsz; i++) {
-		object _k = extract<py::object>(L[i]);
-		auto kp = convertKeyPoint(_k);
-		vKp.push_back(kp);
-	}
-
-	return vKp;
-}
-
-
-cv::DMatch convertDMatch(object &O)
-{
-	assert(string(extract<string>(O.attr("__class__")))=="cv2.DMatch");
-	cv::DMatch D;
-	return D;
-}
-
-
-void acceptString(const string &s)
-{
-	cout << s << endl;
-}
-
-
-void acceptKeypoint(object &_k)
-{
-	cv::KeyPoint K = extract<cv::KeyPoint>(_k);
-	cout << K.size << endl;
-}
-
-
-void acceptList (py::list &_LK)
-{
-	uint listSize = ListSize(_LK);
-}
-
-
-void acceptMat(np::ndarray _M)
-{
-	cv::Mat M = convertNdArray(_M);
-	cout << M << endl;
-}
-
-
-np::ndarray returnNd(int N)
-{
-	cv::Mat I = cv::Mat::eye(N, N, CV_32F);
-	I.at<int>(0,1) = 2;
-	return convertMat(I);
+	_import_array();
 }
 
 
@@ -199,27 +43,23 @@ public:
 		bow(k, s, t, merge_policy, min_feat_apps)
 	{}
 
-	void addImage(const uint image_id, py::list &_keypoints, np::ndarray &_descriptors)
+	void initTrain(int leafSize=40)
+	{ /* do nothing */ }
+
+	void addImage(const uint image_id, const cv::Mat &descriptors, const vector<cv::KeyPoint> &keypoints)
 	{
 		if (bow.numImages()!=0)
-			return addImage2(image_id, _keypoints, _descriptors);
-
-		auto vKeys = convertKeyPointList(_keypoints);
-		auto descriptors = convertNdArray(_descriptors);
-		return bow.addImage(image_id, vKeys, descriptors);
+			return addImage2(image_id, descriptors, keypoints);
+		return bow.addImage(image_id, keypoints, descriptors);
 	}
 
-	void addImage2(const uint image_id, py::list &_keypoints, np::ndarray &_descriptors)
+	void addImage2(const uint image_id, const cv::Mat &descriptors, const vector<cv::KeyPoint> &keypoints)
 	{
-		auto vKeys = convertKeyPointList(_keypoints);
-		auto descriptors = convertNdArray(_descriptors);
-		return bow.addImage2(image_id, vKeys, descriptors);
+		return bow.addImage2(image_id, keypoints, descriptors);
 	}
 
-	vector<PlaceRecognizer::ImageMatch> search(np::ndarray &_descriptors, const uint numToReturn)
+	vector<uint> query(cv::Mat &descriptors, const uint numToReturn)
 	{
-		auto descriptors = convertNdArray(_descriptors);
-
 		vector<vector<cv::DMatch>> descMatches;
 		bow.searchDescriptors(descriptors, descMatches, 2, 32);
 
@@ -235,8 +75,16 @@ public:
 
 		ret = {imageMatches.begin(), imageMatches.begin()+min(numToReturn, (const uint)imageMatches.size())};
 
-		return ret;
+		vector<uint> imgIds;
+		for (auto &r: ret) {
+			imgIds.push_back((uint)r.image_id);
+		}
+
+		return imgIds;
 	}
+
+	void stopTrain()
+	{ /* do nothing */ }
 
 	bool save(const std::string &path)
 	{
@@ -261,125 +109,41 @@ protected:
 };
 
 
-class xVisualDictionary
-{
-public:
-	xVisualDictionary()
-	{}
 
-	bool build(np::ndarray &_descriptors)
-	{
-		cv::Mat descriptors = convertNdArray(_descriptors);
-		return vDict.build(descriptors);
-	}
+PYBIND11_MODULE(_place_recognizer, mod) {
 
-	np::ndarray centers() const
-	{
-		auto C = vDict.getCenters();
-		return convertMat(C);
-	}
+	module_init();
 
-protected:
-	PlaceRecognizer::VisualDictionary vDict;
-};
+	mod.doc() = "Python module for vision-based topological mapping and localization";
 
+	py::class_<PlaceRecognizer::ImageMatch> (mod, "ImageMatch")
+			.def_readonly("image_id", &PlaceRecognizer::ImageMatch::image_id)
+			.def_readonly("score", &PlaceRecognizer::ImageMatch::score)
+		;
 
-class xVLAD
-{
-public:
-	xVLAD() {}
+	// Incremental BoW class
+	py::class_<xIBoW> (mod, "IncrementalBoW")
+			.def( py::init<>() )
+			.def("initTrain", &xIBoW::initTrain,
+				"Initialize training session", "leafSize"_a=40)
+			.def("addImage", &xIBoW::addImage,
+				"Add new image descriptors from an image")
+			.def("stopTrain", &xIBoW::stopTrain,
+				"End a training session")
+			.def("query", &xIBoW::query, "descriptors"_a, "numOfImages"_a=5)
+			.def("save", &xIBoW::save)
+			.def("load", &xIBoW::load)
+			.def_property_readonly("numImages", &xIBoW::numImages, "Number of images stored in database")
+			.def_property_readonly("numDescriptors", &xIBoW::numDescriptors, "Number of descriptors stored in database")
+		;
 
-	void initTrain()
-	{}
-
-	void stopTrain()
-	{}
-
-	void train(uint imageId, py::list &_keypoints, np::ndarray &_descriptors)
-	{}
-
-protected:
-	PlaceRecognizer::VLAD mvlad;
-};
-
-
-np::ndarray kmajority(np::ndarray &input)
-{
-	auto Inp = convertNdArray(input);
-}
-
-
-static void minit()
-{
-	Py_Initialize();
-	import_array();
-	np::initialize();
-
-}
-
-
-np::ndarray bkmeans(np::ndarray &input, uint K, uint max_iter)
-{
-	auto M = convertNdArray(input);
-	PlaceRecognizer::BKMeans bkm(K, max_iter);
-	bkm.cluster(M);
-	auto C = bkm.get_centroids();
-	return convertMat(C);
-}
-
-
-BOOST_PYTHON_MODULE(_place_recognizer)
-{
-	minit();
-
-	/*
-	 * Toy functions to test converter
-	 */
-	def("acceptString", acceptString);
-	def("acceptKeypoint", acceptKeypoint);
-	def("acceptMat", acceptMat);
-	def("acceptList", acceptList);
-	def("returnNd", returnNd);
-
-	def("kmajority", kmajority);
-
-	def("bkmeans", bkmeans);
-
-	enum_<PlaceRecognizer::IncrementalBoW::MergePolicy>("MergePolicy")
-		.value("MERGE_POLICY_NONE", PlaceRecognizer::IncrementalBoW::MergePolicy::MERGE_POLICY_NONE)
-		.value("MERGE_POLICY_AND", PlaceRecognizer::IncrementalBoW::MergePolicy::MERGE_POLICY_AND)
-		.value("MERGE_POLICY_OR", PlaceRecognizer::IncrementalBoW::MergePolicy::MERGE_POLICY_OR)
-	;
-
-	class_<PlaceRecognizer::ImageMatch>("ImageMatch")
-		.def_readonly("image_id", &PlaceRecognizer::ImageMatch::image_id)
-		.def_readonly("score", &PlaceRecognizer::ImageMatch::score)
-	;
-
-	class_<xIBoW>("IncrementalBoW",
-			init<uint,uint,uint,PlaceRecognizer::IncrementalBoW::MergePolicy,bool,uint>
-				(args("k", "s", "t", "merge_policy", "min_feat_apps")) )
-		.def(init<>())
-		.def("addImage", &xIBoW::addImage)
-		.def("addImage2", &xIBoW::addImage2)
-		.def("search", &xIBoW::search)
-		.def("save", &xIBoW::save)
-		.def("load", &xIBoW::load)
-		.def_readonly("numImages", &xIBoW::numImages)
-		.def_readonly("numDescriptors", &xIBoW::numDescriptors)
-	;
-
-	class_<xVisualDictionary>("VisualDictionary")
-		.def("build", &xVisualDictionary::build)
-		.def("centers", &xVisualDictionary::centers)
-	;
-
-/*
-	class_<xVLAD>("VLAD")
-		// Add defs here
-	;
-*/
-
-//	boost::python::converter::registry::push_back(expected_pytype)
+	// Experimental function to test Python<->C++ file handler
+	mod.def("fhandler",
+			[](py::object fd)
+			{
+			},
+			py::arg("fd"),
+			"File handler sample"
+		);
 }
 

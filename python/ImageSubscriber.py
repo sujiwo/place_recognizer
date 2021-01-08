@@ -26,7 +26,7 @@ class ImageSubscriber(rospy.Subscriber):
         msg_type = connection_header[1]
         
         if msg_type!="Image" and msg_type!="CompressedImage":
-            raise ValueError("Incoming message is not of Image type")
+            raise ValueError("Subscribed topic is not of Image type")
         
         msg_class = getattr(import_module(ros_pkg), msg_type)
 #         self.initsub.unregister()

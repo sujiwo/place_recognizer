@@ -27,7 +27,7 @@ set(PYBIND11_CPP_STANDARD -std=c++11)
 find_package(pybind11_catkin REQUIRED)
 add_library ( py_place_recognizer
 	MODULE
-		binding2.cpp
+		binding.cpp
 		cv_conversion.cpp )
 target_include_directories( py_place_recognizer
 	BEFORE
@@ -50,9 +50,7 @@ install(
 
 
 
-#install (FILES __init__.py VLAD.py
-#	DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION} )
-
+# Python modules w/ core classes 
 catkin_install_python(
 	PROGRAMS
 		__init__.py

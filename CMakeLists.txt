@@ -54,10 +54,6 @@ add_library(
 	place_recognizer
 		lib/IncrementalBoW.cpp
 		lib/VLAD.cpp
-		lib/BOWKmajorityTrainer.cpp
-		lib/BKMeans.cpp
-		lib/pam.cpp
-		lib/KMedoids.cpp
 )
 target_link_libraries(
 	place_recognizer
