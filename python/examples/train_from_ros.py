@@ -20,7 +20,9 @@ from place_recognizer import VLAD2, VisualDictionary, IncrementalBoW, ImageSubsc
 
 
 
+
 class RosTrainer:
+    
     def __init__(self, image_topic, position_topic, method, mapfile_output, mapfile_load=None, vdictionaryPath=None):
         self.method = method
         self.mapfile_output = mapfile_output
@@ -49,9 +51,13 @@ class RosTrainer:
         if (position_topic!=''):
             self.positionSub = rospy.Subscriber(position_topic, PointStamped, self.positionCallback)
         
+    def preprocess(self, image_message):
+        return image_message
         
     def imageCallback(self, image_message):
+        image_prep = self.preprocess(image_message)
         keypoints, descriptors = self.extractor.detectAndCompute(image_message, None)
+#         self.mapper.addImage(imageId, descriptors, keypoints)
         cv2.imshow('image', image_message)
         cv2.waitKey(1)
 

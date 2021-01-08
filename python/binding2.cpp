@@ -137,4 +137,13 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 			.def_property_readonly("numDescriptors", &xIBoW::numDescriptors, "Number of descriptors stored in database")
 		;
 
+	// Experimental function to test Python<->C++ file handler
+	mod.def("fhandler",
+			[](py::object fd)
+			{
+			},
+			py::arg("fd"),
+			"File handler sample"
+		);
 }
+
