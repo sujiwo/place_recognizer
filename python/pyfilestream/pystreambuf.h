@@ -467,59 +467,75 @@ struct istream : private streambuf_capsule, streambuf::istream
   }
 };
 
+
+/*
 namespace pybind11 { namespace detail {
-    template <> struct type_caster<std::istream> {
+    template <> struct type_caster<istream> {
     public:
+    	PYBIND11_TYPE_CASTER(istream, _("file"));
         bool load(handle src, bool) {
             if (getattr(src, "read", py::none()).is_none()){
               return false;
             }
 
-						obj = py::reinterpret_borrow<object>(src);
-            value = std::unique_ptr<istream>(new istream(obj, 0));
+			obj = py::reinterpret_borrow<object>(src);
+            istream v(obj, 0);
 
             return true;
         }
 
     protected:
-				py::object obj;
-        std::unique_ptr<istream> value;
+        py::object obj;
 
     public:
-        static PYBIND11_DESCR name() { return type_descr(_("istream")); }
         static handle cast(const std::istream *src, return_value_policy policy, handle parent) {
             return none().release();
         }
-        operator std::istream*() { return value.get(); }
-        operator std::istream&() { return *value; }
-        template <typename _T> using cast_op_type = pybind11::detail::cast_op_type<_T>;
     };
 
-    template <> struct type_caster<std::ostream> {
+    template <> struct type_caster<ostream> {
     public:
-        bool load(handle src, bool) {
-            if (getattr(src, "write", py::none()).is_none()){
-              return false;
-            }
+    	PYBIND11_TYPE_CASTER(ostream, _("file"));
+    	bool load(handle src, bool) {
+    		if (getattr(src, "write", py::none()).is_none()){
+    			return false;
+    		}
 
-						obj = py::reinterpret_borrow<object>(src);
-            value = std::unique_ptr<ostream>(new ostream(obj, 0));
+    		obj = py::reinterpret_borrow<object>(src);
+    		ostream v(obj, 0);
 
-            return true;
-        }
+    		return true;
+    	}
 
     protected:
-				py::object obj;
-        std::unique_ptr<ostream> value;
+    	py::object obj;
 
     public:
-        static PYBIND11_DESCR name() { return type_descr(_("ostream")); }
-        static handle cast(const std::ostream *src, return_value_policy policy, handle parent) {
-            return none().release();
-        }
-        operator std::ostream*() { return value.get(); }
-        operator std::ostream&() { return *value; }
-        template <typename _T> using cast_op_type = pybind11::detail::cast_op_type<_T>;
+    	static handle cast(const std::ostream *src, return_value_policy policy, handle parent) {
+    		return none().release();
+    	}
     };
 }} // namespace pybind11::detail
+*/
+
+
+typedef std::unique_ptr<ostream> OStreamPtr;
+
+namespace pybind11 { namespace detail {
+
+template<>
+struct type_caster<OStreamPtr> {
+public:
+	PYBIND11_TYPE_CASTER(OStreamPtr, _("file"));
+
+	bool load(handle src, bool)
+	{
+		return true;
+	}
+
+	py::object obj;
+};
+
+}}
+
 
