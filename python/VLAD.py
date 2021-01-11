@@ -368,11 +368,29 @@ class VLAD2():
         @param numOfImages: int    Number of images returned from database
         """
         queryDescriptors = VLADDescriptor(imgDescriptors, self.dictionary).flattened().reshape(1,-1)
-        dist, idx = self.tree.query(queryDescriptors, numOfImages)
+        dist, idx = self.tree.query(queryDescriptors, k=numOfImages)
+        return dist, idx
         
         # We got the candidates. Let's check each of them
         
         return [self.placeIds[i] for i in idx[0]]
+    
+    def _scoreVector(self, candidateIndex, vladImgDescriptor):
+        """
+        Return vector of score for a candidate index, starting from -5 to +5.
+        Initial observation shows that good candidates provide low standard deviation in this vector
+        """
+        startSeq = max(0, min(candidateIndex-5, len(self.descriptors)))
+        stopSeq = min(len(self.descriptors), candidateIndex+5)
+        scoresVec = [np.linalg.norm(vladImgDescriptor.flattened() - self.descriptors[v].flattened()) 
+            for v in range(startSeq, stopSeq)]
+        return np.array(scoresVec)
+    
+    def _scoreDiffVector(self, candidateIndex, vladImgDescriptor):
+        scoreVect = self._scoreVector(candidateIndex, vladImgDescriptor)
+        myscore = np.linalg.norm(vladImgDescriptor.flattened()-self.descriptors[candidateIndex].flattened())
+        return scoreVect-myscore
+        
 
     @staticmethod
     def normalizeVlad(vDescriptors):
