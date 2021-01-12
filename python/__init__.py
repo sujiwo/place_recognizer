@@ -5,4 +5,4 @@ from .VLAD import *
 from .Segmentation import RunSegment, CreateMask
 from .GeographicCoordinate import GeographicTrajectory
 from .ImageSubscriber import ImageSubscriber
-from .GenericTrainer import GenericTrainer
+from .GenericImageMap import *

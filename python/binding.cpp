@@ -47,7 +47,7 @@ public:
 	void initTrain(int leafSize=40)
 	{ /* do nothing */ }
 
-	void addImage(const cv::Mat &descriptors, const std::vector<cv::KeyPoint> &keypoints)
+	void addImage(const cv::Mat &descriptors, const std::vector<cv::KeyPoint> &keypoints, uint placeId=-1)
 	{
 		if (bow.numImages()!=0)
 			return addImage2(descriptors, keypoints);
@@ -150,6 +150,9 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 			.def("initTrain", &xIBoW::initTrain,
 				"Initialize training session", "leafSize"_a=40)
 			.def("addImage", &xIBoW::addImage,
+				"descriptors"_a,
+				"keypoints"_a,
+				"placeId"_a=-1,
 				"Add new image descriptors from an image")
 			.def("stopTrain", &xIBoW::stopTrain,
 				"End a training session")

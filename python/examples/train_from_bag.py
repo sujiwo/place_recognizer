@@ -62,6 +62,7 @@ def main():
     _parser.add_argument("--resize", type=float, metavar="ratio", default=0.53333, help="Rescale image size with this ratio")
     _parser.add_argument("--load", type=str, metavar="path", default="", help="Load previous map for retrain")
     _parser.add_argument("--start", type=float, metavar="second", default=0, help="Start mapping from offset")
+    _parser.add_argument("--mask", type=str, default='', help='Image mask file')
     _parser.add_argument("--stop", type=float, metavar="second", default=-1, help="Stop mapping at offset from 0")
     prog_arguments = _parser.parse_args()
     
@@ -75,6 +76,9 @@ def main():
                          prog_arguments.start, 
                          prog_arguments.stop)
     trainer.resize_factor = prog_arguments.resize
+    if prog_arguments.mask!='':
+        trainer.initialMask = cv2.imread(prog_arguments.mask, cv2.IMREAD_GRAYSCALE)
+    
     trainer.runTraining()
     
     

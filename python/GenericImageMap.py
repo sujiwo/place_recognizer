@@ -5,6 +5,7 @@ from .VLAD import *
 from ._place_recognizer import *
 import pickle
 
+_numOrbFeatures = 6000
 
 class GenericTrainer(object):
     '''
@@ -13,7 +14,7 @@ class GenericTrainer(object):
     Attributes
     ----------
     numFeatures: number of features to be extracted by ORB descriptor
-    mask: Image mask to be used by ORB descriptor
+    initialMask: Image mask to be used by ORB descriptor
     resize_factor: Resize image frame by this factor
     show_image_frame: whether to show incoming image frame after preprocessed 
     
@@ -26,9 +27,10 @@ class GenericTrainer(object):
     '''
 
     # Number of features to be extracted from single image
-    numFeatures = 6000
-    # Initial mask for feature extraction
+    numFeatures = _numOrbFeatures
+    # Initial masks for feature extraction
     mask = None
+    initialMask = None
     # Reduce image size with this factor
     resize_factor = 0.53333
     # Whether to show image frames
@@ -56,16 +58,23 @@ class GenericTrainer(object):
             elif method=="ibow":
                 self.mapper = IncrementalBoW()
                 
-        # Feature extractor
-        self.extractor = cv2.ORB_create(self.numFeatures)
+        self.createFeatureExtractor()
         
         # Image ID
         self.imageIdNext = self.mapper.lastImageId()
+        
+    def createFeatureExtractor(self):
+        # Feature extractor
+        self.extractor = cv2.ORB_create(self.numFeatures)
     
     def preprocess(self, image):
         """
         Preprocess input image frame prior to train. You may need to override this function
         in order to customize training process; eg. add segmentation or enhance the contrast
+        
+        This function may do two things:
+        - modify image prior to feature extraction
+        - generate masks for feature extraction
         """
         imgprep = cv2.resize(image, (0,0), None, fx=self.resize_factor, fy=self.resize_factor)
         return imgprep
@@ -119,20 +128,49 @@ class GenericTrainer(object):
         Returns
         -------
         mapper: Mapper object
-        imageMetadata: Metadata
+        imageMetadata: Image stream Metadata (typically geographic positions)
         '''
         fd = open(path, 'rb')
         # Detection
         mMethod = fd.read(4)
+        fd.seek(0)
         if (mMethod=='VLAD'):
-            fd.seek(0)
             mMapper = VLAD2.load(fd)
             print("VLAD Map loaded")
         else:
             mMapper = IncrementalBoW()
             mMapper.load(fd)
             print("IBoW Map loaded")
+            
+        # XXX: metadata in IBoW files can't be read
         imageMetadata = pickle.load(fd)
-        return mMapper, imageMetadata
         fd.close()
+        return mMapper, imageMetadata
 
+
+class GenericImageDatabase(GenericTrainer):
+    def __init__(self, mapfile_load):
+        self.mapper, self.imageMetadata = GenericImageDatabase.loadMap(mapfile_load)
+        self.createFeatureExtractor()
+        
+    def initTrain(self):
+        raise RuntimeError("Not implemented")
+    
+    def stopTrain(self):
+        raise RuntimeError("Not implemented")
+    
+    def addImage(self, image, imageMetadata=None):
+        raise RuntimeError("Not implemented")
+
+    def query(self, image, numOfImages=5, indicesOnly=False):
+        '''
+        Search the map using an image
+        '''
+        imageprep = self.preprocess(image)
+        keypoints, descriptors = self.extractor.detectAndCompute(imageprep, self.mask)
+        indices = self.mapper.query(descriptors, numOfImages)
+        
+        if indicesOnly: return indices
+        else: return [self.imageMetadata[i] for i in indices]
+        
+        

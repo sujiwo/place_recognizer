@@ -58,7 +58,7 @@ catkin_install_python(
 		Segmentation.py
 		GeographicCoordinate.py
 		ImageSubscriber.py
-		GenericTrainer.py
+		GenericImageMap.py
 	DESTINATION
 		${CATKIN_PACKAGE_PYTHON_DESTINATION} )
 
