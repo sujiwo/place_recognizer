@@ -369,7 +369,9 @@ class VLAD2():
         """
         queryDescriptors = VLADDescriptor(imgDescriptors, self.dictionary).flattened().reshape(1,-1)
         dist, idx = self.tree.query(queryDescriptors, k=numOfImages)
-        return dist, idx
+        
+        # Only return index of image, which can be matched to Metadata (see GenericTrainer)
+        return idx
         
         # We got the candidates. Let's check each of them
         

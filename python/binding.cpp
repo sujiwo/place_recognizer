@@ -47,16 +47,18 @@ public:
 	void initTrain(int leafSize=40)
 	{ /* do nothing */ }
 
-	void addImage(const uint image_id, const cv::Mat &descriptors, const std::vector<cv::KeyPoint> &keypoints)
+	void addImage(const cv::Mat &descriptors, const std::vector<cv::KeyPoint> &keypoints)
 	{
 		if (bow.numImages()!=0)
-			return addImage2(image_id, descriptors, keypoints);
-		return bow.addImage(image_id, keypoints, descriptors);
+			return addImage2(descriptors, keypoints);
+		bow.addImage(cImageId, keypoints, descriptors);
+		cImageId++;
 	}
 
-	void addImage2(const uint image_id, const cv::Mat &descriptors, const std::vector<cv::KeyPoint> &keypoints)
+	void addImage2(const cv::Mat &descriptors, const std::vector<cv::KeyPoint> &keypoints)
 	{
-		return bow.addImage2(image_id, keypoints, descriptors);
+		bow.addImage2(cImageId, keypoints, descriptors);
+		cImageId++;
 	}
 
 	std::vector<uint> query(cv::Mat &descriptors, const uint numToReturn)
@@ -103,6 +105,7 @@ public:
 	bool load(const std::string &path)
 	{
 		bow.loadFromDisk(path);
+		cImageId = bow.numImages();
 		return true;
 	}
 
@@ -110,6 +113,7 @@ public:
 	{
 		auto pfd = std::shared_ptr<std::istream>(new std::istream(&fd));
 		bow.loadFromDisk(*pfd);
+		cImageId = bow.numImages();
 		return true;
 	}
 
@@ -124,6 +128,7 @@ public:
 
 protected:
 	PlaceRecognizer::IncrementalBoW bow;
+	uint cImageId = 0;
 };
 
 
