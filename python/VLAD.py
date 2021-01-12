@@ -337,7 +337,7 @@ class VLAD2():
     # XXX: Insert cartesian coordinate of the image when adding
     # imageId is actually vestigial data that can be replaced with other datatypes which will be
     # returned upon query, eg. geographic coordinates
-    def addImage(self, placeId, descriptors, keypoints=None):
+    def addImage(self, descriptors, keypoints=None, placeId=-1):
         """
         Add image descriptors acquired from a single image during a training session
         
@@ -352,13 +352,13 @@ class VLAD2():
         curPtr = len(self.newDatasetDescriptors)
         self.trainDescriptorPtr.append((curPtr, curPtr+descriptors.shape[0]))
         self.newDatasetDescriptors.extend(descriptors)
-        self.placeIds.append(placeId)
+#         self.placeIds.append(placeId)
         
-    def getLastPlaceId(self):
+    def getLastImageId(self):
         if (len(self.placeIds)==0):
             return 0
         else:
-            return self.placeIds[-1]
+            return len(self.descriptors)
         
     # query() should return cartesian coordinates
     def query(self, imgDescriptors, numOfImages=5):
