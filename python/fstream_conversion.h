@@ -42,6 +42,8 @@ public:
 			m |= std::fstream::in;
 		if (modes.find("w")!=std::string::npos)
 			m |= std::fstream::out;
+
+		// XXX: Check compatibility with Python3
 		value = BinaryStream(PyFile_AsFile(obj.ptr()), m);
 		return true;
 	}

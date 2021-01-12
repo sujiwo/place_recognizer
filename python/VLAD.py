@@ -232,7 +232,7 @@ class VLADDescriptor:
     def flattened(self):
         return self.normalized().flatten()
     
-    def adaptNewCentroids(self, dictionary, old_centroids):
+    def _adaptNewCentroids(self, dictionary, old_centroids):
         for i in range(self.descriptors.shape[0]):
             self.descriptors[i] = self.centroid_counters[i]*(dictionary.cluster_centers[i] - old_centroids[i]) + self.descriptors[i]
 
@@ -354,7 +354,7 @@ class VLAD2():
         self.newDatasetDescriptors.extend(descriptors)
 #         self.placeIds.append(placeId)
         
-    def getLastImageId(self):
+    def lastImageId(self):
         if (len(self.placeIds)==0):
             return 0
         else:
@@ -401,7 +401,7 @@ class VLAD2():
     
     def rebuildVladDescriptors(self, oldDictionary):
         for vd in self.descriptors:
-            vd.adaptNewCentroids(self.dictionary, oldDictionary)
+            vd._adaptNewCentroids(self.dictionary, oldDictionary)
             
     def flatNormalDescriptors(self):
         shp = self.descriptors[0].shape()

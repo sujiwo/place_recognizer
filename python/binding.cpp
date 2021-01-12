@@ -119,6 +119,9 @@ public:
 	uint numDescriptors() const
 	{ return bow.numDescriptors(); }
 
+	uint lastImageId() const
+	{ return numImages(); }
+
 protected:
 	PlaceRecognizer::IncrementalBoW bow;
 };
@@ -155,6 +158,8 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 
 			.def_property_readonly("numImages", &xIBoW::numImages, "Number of images stored in database")
 			.def_property_readonly("numDescriptors", &xIBoW::numDescriptors, "Number of descriptors stored in database")
+
+			.def("lastImageId", &xIBoW::lastImageId);
 		;
 
 	// Experimental function to test Python<->C++ file handler
