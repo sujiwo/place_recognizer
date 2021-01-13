@@ -8,7 +8,6 @@ import numpy as np
 import itertools
 from numpy import dtype
 from copy import copy
-from twisted.web.test.test_stan import proto
 
 np.seterr(all='raise')
 # Compatibility between Python2 & 3

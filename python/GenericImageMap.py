@@ -53,7 +53,8 @@ class GenericTrainer(object):
         self.imageMetadata = []
         
         # Prepare the map
-        if mapfile_load is not None:
+        if (mapfile_load):
+            print("Here loading: {}".format(mapfile_load))
             self.mapper, self.imageMetadata = GenericTrainer.loadMap(mapfile_load)
         else:
             if method=="vlad":
