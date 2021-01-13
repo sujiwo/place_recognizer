@@ -102,6 +102,7 @@ public:
 		return true;
 	}
 
+/*
 	bool load(const std::string &path)
 	{
 		bow.loadFromDisk(path);
@@ -114,6 +115,17 @@ public:
 		auto pfd = std::shared_ptr<std::istream>(new std::istream(&fd));
 		bow.loadFromDisk(*pfd);
 		cImageId = bow.numImages();
+		return true;
+	}
+*/
+
+	bool load(py::object &fileObj)
+	{
+		BinaryStream bstream (PyFile_AsFile(fileObj.ptr()), std::fstream::binary|std::fstream::in);
+		fileObj.inc_ref();
+		std::istream istr(&bstream);
+		bow.loadFromDisk(istr);
+		fileObj.dec_ref();
 		return true;
 	}
 
@@ -161,8 +173,11 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 			.def("save", static_cast<bool (xIBoW::*)(const std::string&)>(&xIBoW::save), "Save mapped images to disk")
 			.def("save", static_cast<bool (xIBoW::*)(BinaryStream&)>(&xIBoW::save), "Save mapped images to an open file descriptor")
 
+/*
 			.def("load", static_cast<bool (xIBoW::*)(const std::string&)>(&xIBoW::load), "Load a map file from disk")
 			.def("load", static_cast<bool (xIBoW::*)(BinaryStream&)>(&xIBoW::load), "Load a map file from an open file descriptor")
+*/
+			.def("load", &xIBoW::load, "Load a map file from an open file descriptor")
 
 			.def_property_readonly("numImages", &xIBoW::numImages, "Number of images stored in database")
 			.def_property_readonly("numDescriptors", &xIBoW::numDescriptors, "Number of descriptors stored in database")

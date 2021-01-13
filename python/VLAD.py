@@ -267,7 +267,7 @@ class VLAD2():
     def is_file_str(filename, open_mode):
         if isinstance(filename, str):
             fd = open(filename, open_mode)
-        elif isinstance(filename, file):
+        elif hasattr(filename, "write") or hasattr(filename, "read"):
             fd = filename
         else:
             raise ValueError("Supplied file name is neither path nor file descriptor")

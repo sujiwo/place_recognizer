@@ -4,6 +4,10 @@ import cv2
 from .VLAD import *
 from ._place_recognizer import *
 import pickle
+import tarfile
+from io import BytesIO
+from place_recognizer._place_recognizer import IncrementalBoW
+
 
 _numOrbFeatures = 6000
 
@@ -110,42 +114,80 @@ class GenericTrainer(object):
         Stop current training session and save resulting map to disk
         """
         self.mapper.stopTrain()
-        fd = open(self.mapfile_output, "wb")
-        self.mapper.save(fd)
-        # Protocol 2 is supported by Python 2.7 and 3.8
-        pickle.dump(self.imageMetadata, fd, protocol=2)
-        fd.close()
+        self.save(self.mapfile_output)
+        
+    def save(self, filepath):
+        '''
+        Map and metadata is saved separately but joined in a TAR archive
+        '''
+        prtar = tarfile.TarFile(filepath, "w")
+        
+        mapIo = BytesIO()
+        mapInfo = tarfile.TarInfo(name="map.dat")
+        self.mapper.save(mapIo)
+        mapInfo.size = int(mapIo.tell())
+        mapIo.seek(0)
+        prtar.addfile(tarinfo=mapInfo, fileobj=mapIo)
+        
+        metadataIo = BytesIO()
+        metadataInfo = tarfile.TarInfo(name="metadata.dat")
+        pickle.dump(self.imageMetadata, metadataIo, protocol=2)
+        metadataInfo.size = int(metadataIo.tell())
+        metadataIo.seek(0)
+        prtar.addfile(tarinfo=metadataInfo, fileobj=metadataIo)
+        
+        prtar.close()
         
     @staticmethod
-    def loadMap(path):
+    def loadMap(filepath):
         '''
         Load map from file on disk
-        
+         
         Parameters
         ----------
         :param path: str, path to file on disk
-        
+         
         Returns
         -------
         mapper: Mapper object
         imageMetadata: Image stream Metadata (typically geographic positions)
         '''
-        fd = open(path, 'rb')
-        # Detection
-        mMethod = fd.read(4)
-        fd.seek(0)
-        if (mMethod=='VLAD'):
-            mMapper = VLAD2.load(fd)
-            print("VLAD Map loaded")
+        prtar = tarfile.TarFile(filepath, "r")
+        
+        mapInfo, metadataInfo = prtar.getmembers()
+        mapIo = prtar.extractfile(mapInfo)
+        metadataIo = prtar.extractfile(metadataInfo)
+        
+        sign = mapIo.read(4)
+        mapIo.seek(0)
+        if (sign=="VLAD"):
+            mapObj = VLAD2.load(mapIo)
         else:
-            mMapper = IncrementalBoW()
-            mMapper.load(fd)
-            print("IBoW Map loaded")
-            
-        # XXX: metadata in IBoW files can't be read
-        imageMetadata = pickle.load(fd)
-        fd.close()
-        return mMapper, imageMetadata
+            mapObj = IncrementalBoW()
+            mapObj.load(mapIo)
+        metadata = pickle.load(metadataIo)
+        
+        prtar.close()
+        return mapObj, metadata
+        
+#     @staticmethod
+#     def loadMap(path):
+#         fd = open(path, 'rb')
+#         # Detection
+#         mMethod = fd.read(4)
+#         fd.seek(0)
+#         if (mMethod=='VLAD'):
+#             mMapper = VLAD2.load(fd)
+#             print("VLAD Map loaded")
+#         else:
+#             mMapper = IncrementalBoW()
+#             mMapper.load(fd)
+#             print("IBoW Map loaded")
+#             
+#         # XXX: metadata in IBoW files can't be read
+#         imageMetadata = pickle.load(fd)
+#         fd.close()
+#         return mMapper, imageMetadata
 
 
 class GenericImageDatabase(GenericTrainer):
