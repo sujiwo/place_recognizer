@@ -1,11 +1,14 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 import sys
 import cv2
 from .VLAD import *
 from ._place_recognizer import *
 import pickle
 import tarfile
+import uuid
+import os
 from io import BytesIO
+from numpy.random import randint
 from place_recognizer._place_recognizer import IncrementalBoW
 
 
@@ -50,7 +53,7 @@ class GenericTrainer(object):
         self.imageMetadata = []
         
         # Prepare the map
-        if mapfile_load!='':
+        if mapfile_load is not None:
             self.mapper, self.imageMetadata = GenericTrainer.loadMap(mapfile_load)
         else:
             if method=="vlad":
@@ -117,17 +120,39 @@ class GenericTrainer(object):
         self.save(self.mapfile_output)
         
     def save(self, filepath):
+        
         '''
         Map and metadata is saved separately but joined in a TAR archive
         '''
         prtar = tarfile.TarFile(filepath, "w")
         
-        mapIo = BytesIO()
-        mapInfo = tarfile.TarInfo(name="map.dat")
-        self.mapper.save(mapIo)
-        mapInfo.size = int(mapIo.tell())
-        mapIo.seek(0)
-        prtar.addfile(tarinfo=mapInfo, fileobj=mapIo)
+        # Header
+        header = {
+                'method': self.method,
+                'initialMask': self.initialMask
+            }
+        headerIo = BytesIO()
+        headerInfo = tarfile.TarInfo(name="header.dat")
+        pickle.dump(header, headerIo, protocol=2)
+        headerInfo.size = int(headerIo.tell())
+        headerIo.seek(0)
+        prtar.addfile(tarinfo=headerInfo, fileobj=headerIo)
+        
+        if self.method=='vlad':
+            mapIo = BytesIO()
+            mapInfo = tarfile.TarInfo(name="map.dat")
+            self.mapper.save(mapIo)
+            mapInfo.size = int(mapIo.tell())
+            mapIo.seek(0)
+            prtar.addfile(tarinfo=mapInfo, fileobj=mapIo)
+            ibowMapTmpName = None
+        else:
+            # IncrementalBoW does not support saving to file descriptor
+            randInt = str(randint(10000, 99999))
+            ibowMapTmpName = os.path.join(os.path.dirname(os.path.realpath(filepath)), 'map'+randInt+'.int')
+            self.mapper.save(ibowMapTmpName)
+            prtar.add(ibowMapTmpName, arcname='map.dat')
+            print("IBoW map saved")
         
         metadataIo = BytesIO()
         metadataInfo = tarfile.TarInfo(name="metadata.dat")
@@ -137,6 +162,8 @@ class GenericTrainer(object):
         prtar.addfile(tarinfo=metadataInfo, fileobj=metadataIo)
         
         prtar.close()
+        if (ibowMapTmpName is not None):
+            os.remove(ibowMapTmpName)
         
     @staticmethod
     def loadMap(filepath):
@@ -154,41 +181,30 @@ class GenericTrainer(object):
         '''
         prtar = tarfile.TarFile(filepath, "r")
         
-        mapInfo, metadataInfo = prtar.getmembers()
-        mapIo = prtar.extractfile(mapInfo)
-        metadataIo = prtar.extractfile(metadataInfo)
+        headerInfo, mapInfo, metadataInfo = prtar.getmembers()
         
-        sign = mapIo.read(4)
-        mapIo.seek(0)
-        if (sign=="VLAD"):
+        headerIo = prtar.extractfile(headerInfo)
+        header = pickle.load(headerIo)
+
+        if (header['method']=='vlad'):
+            mapIo = prtar.extractfile(mapInfo)
             mapObj = VLAD2.load(mapIo)
         else:
+            import tempfile
             mapObj = IncrementalBoW()
-            mapObj.load(mapIo)
+            mapInfo.name = str(uuid.uuid4())
+            ibowMapTmpName = os.path.join(tempfile.gettempdir(), mapInfo.name)
+            prtar.extract(mapInfo, path=tempfile.tempdir)
+            mapObj.load(ibowMapTmpName)
+            os.remove(ibowMapTmpName)
+            pass
+        
+        metadataIo = prtar.extractfile(metadataInfo)    
         metadata = pickle.load(metadataIo)
         
         prtar.close()
         return mapObj, metadata
         
-#     @staticmethod
-#     def loadMap(path):
-#         fd = open(path, 'rb')
-#         # Detection
-#         mMethod = fd.read(4)
-#         fd.seek(0)
-#         if (mMethod=='VLAD'):
-#             mMapper = VLAD2.load(fd)
-#             print("VLAD Map loaded")
-#         else:
-#             mMapper = IncrementalBoW()
-#             mMapper.load(fd)
-#             print("IBoW Map loaded")
-#             
-#         # XXX: metadata in IBoW files can't be read
-#         imageMetadata = pickle.load(fd)
-#         fd.close()
-#         return mMapper, imageMetadata
-
 
 class GenericImageDatabase(GenericTrainer):
     def __init__(self, mapfile_load):

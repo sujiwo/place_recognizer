@@ -11,6 +11,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
+#include "pyfilestream/pystreambuf.h"
+#include <sstream>
 #include "fstream_conversion.h"
 #include "cv_conversion.h"
 
@@ -89,43 +91,17 @@ public:
 	void stopTrain()
 	{ /* do nothing */ }
 
+
 	bool save(const std::string &path)
 	{
 		bow.saveToDisk(path);
 		return true;
 	}
 
-	bool save(BinaryStream &fd)
-	{
-		auto pfd = std::shared_ptr<std::ostream>(new std::ostream(&fd));
-		bow.saveToDisk(*pfd);
-		return true;
-	}
-
-/*
 	bool load(const std::string &path)
 	{
 		bow.loadFromDisk(path);
 		cImageId = bow.numImages();
-		return true;
-	}
-
-	bool load(BinaryStream &fd)
-	{
-		auto pfd = std::shared_ptr<std::istream>(new std::istream(&fd));
-		bow.loadFromDisk(*pfd);
-		cImageId = bow.numImages();
-		return true;
-	}
-*/
-
-	bool load(py::object &fileObj)
-	{
-		BinaryStream bstream (PyFile_AsFile(fileObj.ptr()), std::fstream::binary|std::fstream::in);
-		fileObj.inc_ref();
-		std::istream istr(&bstream);
-		bow.loadFromDisk(istr);
-		fileObj.dec_ref();
 		return true;
 	}
 
@@ -170,14 +146,17 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 				"End a training session")
 			.def("query", &xIBoW::query, "descriptors"_a, "numOfImages"_a=5)
 
+/*
 			.def("save", static_cast<bool (xIBoW::*)(const std::string&)>(&xIBoW::save), "Save mapped images to disk")
 			.def("save", static_cast<bool (xIBoW::*)(BinaryStream&)>(&xIBoW::save), "Save mapped images to an open file descriptor")
+*/
+			.def("save", &xIBoW::save, "save mapped images to disk file")
 
 /*
 			.def("load", static_cast<bool (xIBoW::*)(const std::string&)>(&xIBoW::load), "Load a map file from disk")
 			.def("load", static_cast<bool (xIBoW::*)(BinaryStream&)>(&xIBoW::load), "Load a map file from an open file descriptor")
 */
-			.def("load", &xIBoW::load, "Load a map file from an open file descriptor")
+			.def("load", &xIBoW::load, "Load a map file from disk file")
 
 			.def_property_readonly("numImages", &xIBoW::numImages, "Number of images stored in database")
 			.def_property_readonly("numDescriptors", &xIBoW::numDescriptors, "Number of descriptors stored in database")
@@ -185,22 +164,5 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 			.def("lastImageId", &xIBoW::lastImageId);
 		;
 
-	// Experimental function to test Python<->C++ file handler
-	mod.def("handle_write",
-			[](BinaryStream &bfd)
-			{
-				auto pfd = std::shared_ptr<std::ostream>(new std::ostream(&bfd));
-				*pfd << "Binary";
-			},
-			py::arg("fd"),
-			"File handler sample"
-		);
-
-	mod.def("handle_read",
-			[](BinaryStream &bfd)
-			{
-				auto pfd = std::shared_ptr<std::istream>(new std::istream(&bfd));
-			}
-		);
 }
 
