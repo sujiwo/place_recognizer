@@ -7,9 +7,11 @@ import pickle
 import tarfile
 import uuid
 import os
+import numpy as np
 from io import BytesIO
 from numpy.random import randint
 from place_recognizer._place_recognizer import IncrementalBoW
+from .Segmentation import _hasSegment, CreateMask
 
 
 _numOrbFeatures = 6000
@@ -85,6 +87,12 @@ class GenericTrainer(object):
         - generate masks for feature extraction
         """
         imgprep = cv2.resize(image, (0,0), None, fx=self.resize_factor, fy=self.resize_factor)
+        
+        if _hasSegment==True:
+            if (imgprep.shape[0:2]!=self.initialMask.shape[0:2]):
+                print("Masks has incompatible shape")
+            else:
+                self.mask = np.logical_and(self.initialMask, CreateMask(imgprep)).astype(np.uint8)
         return imgprep
     
     def addImage(self, image, imageMetadata=None):
@@ -102,9 +110,12 @@ class GenericTrainer(object):
         self.mapper.addImage(descriptors, keypoints, self.imageIdNext)
         self.imageMetadata.append(imageMetadata)
         self.imageIdNext += 1
-
+        self.drawImageFrame(image_prep, keypoints, descriptors)
+            
+    def drawImageFrame(self, image_prep, keypoints, descriptors):
         if self.show_image_frame:
-            cv2.imshow("Image", image_prep)
+            image_withKp = cv2.drawKeypoints(image_prep, keypoints, None, (0,255,0))
+            cv2.imshow("Image", image_withKp)
             cv2.waitKey(1)
 
     def initTrain(self):
@@ -213,13 +224,13 @@ class GenericImageDatabase(GenericTrainer):
         self.createFeatureExtractor()
         
     def initTrain(self):
-        raise RuntimeError("Not implemented")
+        raise NotImplementedError("ImageDatabase does not implement training")
     
     def stopTrain(self):
-        raise RuntimeError("Not implemented")
+        raise NotImplementedError("ImageDatabase does not implement training")
     
     def addImage(self, image, imageMetadata=None):
-        raise RuntimeError("Not implemented")
+        raise NotImplementedError("ImageDatabase does not implement training")
 
     def query(self, image, numOfImages=5, indicesOnly=False):
         '''

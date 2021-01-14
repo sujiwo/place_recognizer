@@ -8,9 +8,10 @@ Data source comes from a ROS Bag
 from RandomAccessBag import RandomAccessBag, ImageBag
 import cv2
 import sys
-from place_recognizer import VisualDictionary, VLAD2, IncrementalBoW, GeographicTrajectory, GenericTrainer
 from tqdm import tqdm
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentError
+from copy import copy
+from place_recognizer import VisualDictionary, VLAD2, IncrementalBoW, GeographicTrajectory, GenericTrainer
 
 
 class BagTrainer(GenericTrainer):
@@ -18,6 +19,7 @@ class BagTrainer(GenericTrainer):
         super(BagTrainer, self).__init__(method, mapfile_output, mapfile_load, vdictionaryPath)
 
         # Inspect the bag file
+        self.trainBag = None
         allBagConns = RandomAccessBag.getAllConnections(bagfilePath)
         trajectorySrc = None
         for bg in allBagConns:
@@ -27,6 +29,8 @@ class BagTrainer(GenericTrainer):
             elif bg.type() in GeographicTrajectory.supportedMsgTypes:
                 self.trajectorySrc = GeographicTrajectory(bg)
                 print("Using {} as trajectory source".format(bg.topic()))
+        if (not self.trainBag):
+            raise ArgumentError("Image topic is invalid")
                 
         self.sampleList = self.trainBag.desample(desample, True, bagStart, bagStop)
                 
@@ -78,6 +82,10 @@ def main():
     trainer.resize_factor = prog_arguments.resize
     if prog_arguments.mask!='':
         trainer.initialMask = cv2.imread(prog_arguments.mask, cv2.IMREAD_GRAYSCALE)
+        trainer.initialMask = cv2.resize(trainer.initialMask, (0,0), None, fx=trainer.resize_factor, fy=trainer.resize_factor)
+        trainer.mask = copy(trainer.initialMask)
+        print("Mask size now: {}".format(trainer.mask.shape))
+        
     
     trainer.runTraining()
     

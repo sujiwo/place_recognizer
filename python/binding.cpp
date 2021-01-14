@@ -146,16 +146,7 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 				"End a training session")
 			.def("query", &xIBoW::query, "descriptors"_a, "numOfImages"_a=5)
 
-/*
-			.def("save", static_cast<bool (xIBoW::*)(const std::string&)>(&xIBoW::save), "Save mapped images to disk")
-			.def("save", static_cast<bool (xIBoW::*)(BinaryStream&)>(&xIBoW::save), "Save mapped images to an open file descriptor")
-*/
 			.def("save", &xIBoW::save, "save mapped images to disk file")
-
-/*
-			.def("load", static_cast<bool (xIBoW::*)(const std::string&)>(&xIBoW::load), "Load a map file from disk")
-			.def("load", static_cast<bool (xIBoW::*)(BinaryStream&)>(&xIBoW::load), "Load a map file from an open file descriptor")
-*/
 			.def("load", &xIBoW::load, "Load a map file from disk file")
 
 			.def_property_readonly("numImages", &xIBoW::numImages, "Number of images stored in database")
