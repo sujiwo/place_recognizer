@@ -12,6 +12,7 @@ import rospy
 import time
 import sys
 import cv2
+import numpy as np
 from copy import copy
 from argparse import ArgumentParser, ArgumentError
 from sensor_msgs.msg import Image, CompressedImage
@@ -21,7 +22,7 @@ from place_recognizer import VLAD2, VisualDictionary, IncrementalBoW, ImageSubsc
 
 class RosTrainer(GenericTrainer):
     def __init__(self, image_topic, position_topic, method, mapfile_output, mapfile_load=None, vdictionaryPath=None):
-        super(RosTrainerX, self).__init__(method, mapfile_output, mapfile_load, vdictionaryPath)
+        super(RosTrainer, self).__init__(method, mapfile_output, mapfile_load, vdictionaryPath)
 
         # Prepare ROS subsystem
         rospy.init_node("place_recognizer_trainer", disable_signals=True)
@@ -30,14 +31,23 @@ class RosTrainer(GenericTrainer):
         self.currentPosition = None
         if (position_topic!=''):
             self.positionSub = rospy.Subscriber(position_topic, PointStamped, self.positionCallback)
+            
+        self.initTrain()
 
     
     def imageCallback(self, image):
         self.addImage(image, copy(self.currentPosition))
     
     def positionCallback(self, pos_message):
-        self.currentPosition = copy(pos_message)
+        self.currentPosition = np.array([
+            pos_message.point.x, 
+            pos_message.point.y, 
+            pos_message.point.z ]) 
 
+    def stopTrain(self):
+        # XXX: Do something with missing positions
+        
+        super(RosTrainer, self).stopTrain()
 
         
 
