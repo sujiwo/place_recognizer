@@ -79,6 +79,7 @@ class VisualDictionary():
             descSums[c] += f
             descCount[c] += 1
         for c in range(self.cluster_centers.shape[0]):
+            # XXX: Highly doubtful !
 #             descSums[c] /= float(descCount[c])
             descSums[c] /= float(newDescriptors.shape[0])
         descSums = descSums.astype(np.float32)

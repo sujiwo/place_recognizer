@@ -13,8 +13,15 @@ from numpy.random import randint
 from place_recognizer._place_recognizer import IncrementalBoW
 from .Segmentation import _hasSegment, CreateMask
 
+try:
+    import im_enhance as ime
+    _hasEnhancement = True
+except ImportError:
+    _hasEnhancement = False
+
 
 _numOrbFeatures = 6000
+
 
 class GenericTrainer(object):
     '''
@@ -87,6 +94,9 @@ class GenericTrainer(object):
         - generate masks for feature extraction
         """
         imgprep = cv2.resize(image, (0,0), None, fx=self.resize_factor, fy=self.resize_factor)
+        
+        if _hasEnhancement==True:
+            imgprep = ime.multiScaleRetinexCP(imgprep)
         
         if _hasSegment==True:
             if (imgprep.shape[0:2]!=self.initialMask.shape[0:2]):
