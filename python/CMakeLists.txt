@@ -51,7 +51,10 @@ install(
 
 
 # Python modules w/ core classes 
-catkin_install_python(
+# XXX: Should use catkin_install_python, but ROS Noetic
+# mangle the installed files (not all) such that they are only
+# `symlink' to source files but can't be imported
+install(
 	PROGRAMS
 		__init__.py
 		VLAD.py
@@ -63,7 +66,7 @@ catkin_install_python(
 		${CATKIN_PACKAGE_PYTHON_DESTINATION} )
 
 # Python scripts for VLAD training, querying and service
-catkin_install_python(
+install(
 	PROGRAMS
 		examples/cityscape_dict.py
 		examples/query_from_bag.py
