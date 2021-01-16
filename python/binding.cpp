@@ -11,9 +11,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
-#include "pyfilestream/pystreambuf.h"
 #include <sstream>
-#include "fstream_conversion.h"
 #include "cv_conversion.h"
 
 #include <opencv2/core.hpp>
