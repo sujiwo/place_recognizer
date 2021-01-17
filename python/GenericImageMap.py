@@ -12,6 +12,7 @@ from io import BytesIO
 from numpy.random import randint
 from place_recognizer._place_recognizer import IncrementalBoW
 from .Segmentation import _hasSegment, CreateMask
+from hgext.convert.common import mapfile
 
 try:
     import im_enhance as ime
@@ -29,17 +30,17 @@ class GenericTrainer(object):
     
     Attributes
     ----------
-    numFeatures: number of features to be extracted by ORB descriptor
-    initialMask: Image mask to be used by ORB descriptor
-    resize_factor: Resize image frame by this factor
-    show_image_frame: whether to show incoming image frame after preprocessed 
+    - numFeatures: number of features to be extracted by ORB descriptor
+    - initialMask: Image mask to be used by ORB descriptor
+    - resize_factor: Resize image frame by this factor
+    - show_image_frame: whether to show incoming image frame after preprocessed 
     
     Parameters
     ----------
-    method: str, "ibow" or "vlad"
-    mapfile_output: str, path to resulting map file
-    mapfile_load: str, path to existing map file to be loaded
-    vdictionaryPath: str, path to visual dictionary (only for vlad)
+    - method: str, "ibow" or "vlad"
+    - mapfile_output: str, path to resulting map file
+    - mapfile_load: str, path to existing map file to be loaded
+    - vdictionaryPath: str, path to visual dictionary (only for vlad)
     '''
 
     # Number of features to be extracted from single image
@@ -52,7 +53,7 @@ class GenericTrainer(object):
     # Whether to show image frames
     show_image_frame = True
     
-    def __init__(self, method, mapfile_output, mapfile_load=None, vdictionaryPath=None):
+    def __init__(self, method, mapfile_output=None, mapfile_load=None, vdictionaryPath=None, useEnhancement=False):
         """
         Initialization
         
@@ -60,11 +61,12 @@ class GenericTrainer(object):
         self.method = method
         self.mapfile_output = mapfile_output
         self.imageMetadata = []
+        self.useEnhancement = useEnhancement and _hasEnhancement
         
         # Prepare the map
         if (mapfile_load):
             print("Here loading: {}".format(mapfile_load))
-            self.mapper, self.imageMetadata = GenericTrainer.loadMap(mapfile_load)
+            self.mapper, self.imageMetadata, header = GenericTrainer.loadMap(mapfile_load)
         else:
             if method=="vlad":
                 try:
@@ -95,7 +97,7 @@ class GenericTrainer(object):
         """
         imgprep = cv2.resize(image, (0,0), None, fx=self.resize_factor, fy=self.resize_factor)
         
-        if _hasEnhancement==True:
+        if self.useEnhancement==True:
             imgprep = ime.multiScaleRetinexCP(imgprep)
         
         if _hasSegment==True:
@@ -134,10 +136,12 @@ class GenericTrainer(object):
         """
         self.mapper.initTrain()
     
-    def stopTrain(self):
+    def stopTrain(self, mapfileOutput=None):
         """
         Stop current training session and save resulting map to disk
         """
+        if mapfileOutput is not None:
+            self.mapfile_output = mapfileOutput
         self.mapper.stopTrain()
         self.save(self.mapfile_output)
         
@@ -151,7 +155,8 @@ class GenericTrainer(object):
         # Header
         header = {
                 'method': self.method,
-                'initialMask': self.initialMask
+                'initialMask': self.initialMask,
+                'resize_factor': self.resize_factor
             }
         headerIo = BytesIO()
         headerInfo = tarfile.TarInfo(name="header.dat")
@@ -186,6 +191,10 @@ class GenericTrainer(object):
         prtar.close()
         if (ibowMapTmpName is not None):
             os.remove(ibowMapTmpName)
+            
+    @staticmethod
+    def createTrainerFromMapfile(filepath):
+        pass
         
     @staticmethod
     def loadMap(filepath):
@@ -200,6 +209,7 @@ class GenericTrainer(object):
         -------
         mapper: Mapper object
         imageMetadata: Image stream Metadata (typically geographic positions)
+        header
         '''
         prtar = tarfile.TarFile(filepath, "r")
         
@@ -225,12 +235,13 @@ class GenericTrainer(object):
         metadata = pickle.load(metadataIo)
         
         prtar.close()
-        return mapObj, metadata
+        return mapObj, metadata, header
         
 
 class GenericImageDatabase(GenericTrainer):
-    def __init__(self, mapfile_load):
-        self.mapper, self.imageMetadata = GenericImageDatabase.loadMap(mapfile_load)
+    def __init__(self, mapfile_load, useEnhancement=False):
+        self.useEnhancement = useEnhancement and _hasEnhancement
+        self.mapper, self.imageMetadata, header = GenericImageDatabase.loadMap(mapfile_load)
         self.createFeatureExtractor()
         
     def initTrain(self):
@@ -249,6 +260,9 @@ class GenericImageDatabase(GenericTrainer):
         imageprep = self.preprocess(image)
         keypoints, descriptors = self.extractor.detectAndCompute(imageprep, self.mask)
         indices = self.mapper.query(descriptors, numOfImages)
+        
+        if self.show_image_frame:
+            self.drawImageFrame(imageprep, keypoints, descriptors)
         
         if indicesOnly: return indices
         else: return [self.imageMetadata[i] for i in indices]

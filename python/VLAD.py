@@ -38,6 +38,14 @@ class VisualDictionary():
         self.descriptors = np.array(list(itertools.chain.from_iterable(self.descriptors))).astype(np.float32)
         criteria = (cv2.TERM_CRITERIA_EPS|cv2.TERM_CRITERIA_MAX_ITER, 10, 0.1)
         compactness, bestLabels, self.cluster_centers = cv2.kmeans(self.descriptors, self.numWords, None, criteria, 5, cv2.KMEANS_PP_CENTERS)
+        
+        # Put sum of all descriptors
+        self.centerSums = np.zeros(self.cluster_centers.shape, dtype=np.float64)
+        print("Building summation of all centers")
+        for i in range(len(bestLabels)):
+            lbl = bestLabels[i]
+            self.centerSums[lbl] += self.descriptors[i]
+        
         print("Done")
     
     # Outputs the index of nearest center using single feature
@@ -96,6 +104,7 @@ class VisualDictionary():
         pickle.dump(self.numWords, fd, protocol=_pickleProtocol)
         pickle.dump(self.numFeatures, fd, protocol=_pickleProtocol)
         pickle.dump(self.cluster_centers, fd, protocol=_pickleProtocol)
+        pickle.dump(self.centerSums)
         fd.close()
         
     @staticmethod
@@ -121,6 +130,7 @@ class VisualDictionary():
         vd.numFeatures = pickle.load(fd)
         vd.cluster_centers = pickle.load(fd)
         vd.featureDetector = cv2.ORB_create(vd.numFeatures)
+        vd.centerSums = pickle.load(fd)
         fd.close()
         return vd
     
@@ -356,7 +366,7 @@ class VLAD2():
 #         self.placeIds.append(placeId)
         
     def lastImageId(self):
-        if (len(self.placeIds)==0):
+        if (self.descriptors is None):
             return 0
         else:
             return len(self.descriptors)
