@@ -9,6 +9,7 @@ import itertools
 from numpy import dtype
 from copy import copy
 
+
 np.seterr(all='raise')
 # Compatibility between Python2 & 3
 _pickleProtocol = 2
@@ -28,6 +29,7 @@ class VisualDictionary():
         self.featureDetector = cv2.ORB_create(numFeaturesOnImage)
         self.descriptors = []
         self.cluster_centers = []
+        self.centerCounts = np.zeros((self.numWords,), dtype=np.uint64)
         
     def train(self, image):
         keypts, descrs = self.featureDetector.detectAndCompute(image, None)
@@ -40,22 +42,15 @@ class VisualDictionary():
         compactness, bestLabels, self.cluster_centers = cv2.kmeans(self.descriptors, self.numWords, None, criteria, 5, cv2.KMEANS_PP_CENTERS)
         
         # Put sum of all descriptors
-        self.centerSums = np.zeros(self.cluster_centers.shape, dtype=np.float64)
         print("Building summation of all centers")
         for i in range(len(bestLabels)):
             lbl = bestLabels[i]
-            self.centerSums[lbl] += self.descriptors[i]
-        
+            self.centerCounts[lbl] += 1
         print("Done")
     
     # Outputs the index of nearest center using single feature
     def predict1row(self, descriptors):
         assert(descriptors.shape[0]==self.cluster_centers.shape[1])
-#         dist = []
-#         for ci in range(len(self.cluster_centers)):
-#             c = self.cluster_centers[ci]
-#             d = np.linalg.norm(c - descriptors.astype(np.float32))
-#             dist.append(d)
         dist = np.linalg.norm(self.cluster_centers - descriptors.astype(np.float32), axis=1)
         return np.argmin(dist)
     
@@ -72,29 +67,25 @@ class VisualDictionary():
     
     def adapt(self, newDescriptors, dryRun=False):
         """
-        Adjust cluster centers to new set of descriptors.
+        Adjust cluster centers to new set of descriptors as moving averages
         @param newDescriptors: numpy.ndarray    Set of new descriptors
         @param dryRun: bool                     If True, returns new cluster center but do not change it
         @return: numpy.ndarray or None
         """
         assert(newDescriptors.dtype==self.cluster_centers.dtype)
         descCenters = self.predict(newDescriptors)
-        descSums = np.zeros(self.cluster_centers.shape, dtype=np.float64)
+        movingAverage = copy(self.cluster_centers)
         descCount = np.zeros((self.cluster_centers.shape[0],), dtype=np.uint64)
         for i in range(newDescriptors.shape[0]):
             c = descCenters[i]
-            f = newDescriptors[i]
-            descSums[c] += f
+            movingAverage[c] += (1.0/float(self.centerCounts[c]+i+1)) * (newDescriptors[i] - movingAverage[c])
             descCount[c] += 1
-        for c in range(self.cluster_centers.shape[0]):
-            # XXX: Highly doubtful !
-#             descSums[c] /= float(descCount[c])
-            descSums[c] /= float(newDescriptors.shape[0])
-        descSums = descSums.astype(np.float32)
+        movingAverage = movingAverage.astype(np.float32)
         if dryRun==True:
-            return descSums
+            return movingAverage
         else:
-            self.cluster_centers = descSums
+            self.cluster_centers = movingAverage
+            self.centerCounts += descCount
     
     def save(self, path):
         """
@@ -104,7 +95,7 @@ class VisualDictionary():
         pickle.dump(self.numWords, fd, protocol=_pickleProtocol)
         pickle.dump(self.numFeatures, fd, protocol=_pickleProtocol)
         pickle.dump(self.cluster_centers, fd, protocol=_pickleProtocol)
-        pickle.dump(self.centerSums)
+        pickle.dump(self.centerCounts, fd, protocol=_pickleProtocol)
         fd.close()
         
     @staticmethod
@@ -130,7 +121,7 @@ class VisualDictionary():
         vd.numFeatures = pickle.load(fd)
         vd.cluster_centers = pickle.load(fd)
         vd.featureDetector = cv2.ORB_create(vd.numFeatures)
-        vd.centerSums = pickle.load(fd)
+        vd.centerCounts = pickle.load(fd)
         fd.close()
         return vd
     
@@ -145,57 +136,6 @@ class VisualDictionary():
         self.featureDetector = cv2.ORB_create(self.numFeatures)
     
     
-class VisualDictionaryBinaryFeature(VisualDictionary):
-    def __init__ (self, numWords=256, numFeaturesOnImage=3000):
-        self.numWords = numWords
-        self.numFeatures = numFeaturesOnImage
-        self.featureDetector = cv2.ORB_create(numFeaturesOnImage)
-        self.descriptors = []
-        self.cluster_centers = []
-        self.bestLabels = []
-        
-    def train(self, image):
-        keypts, descrs = self.featureDetector.detectAndCompute(image, None)
-        self.descriptors.append(descrs)
-    
-    def build(self):
-        # Not running, really.
-        # We turn to Matlab for computing cluster centers     
-        print("Training done")
-        
-    @staticmethod
-    def hamming_distance(f1, f2):
-        assert(len(f1)==len(f2) and f1.dtype==np.uint8 and f2.dtype==np.uint8)
-        return cv2.norm(f1, f2, cv2.NORM_HAMMING)
-    
-    # Outputs the index of nearest center using single feature
-    def predict1row(self, descriptors):
-        assert(descriptors.shape[0]==self.cluster_centers.shape[1])
-        dist = [self.hamming_distance(descriptors, c) for c in self.cluster_centers ]
-        return np.argmin(dist)
-    
-#     def predict(self, X):
-#         indices = []
-#         for r in range(X.shape[0]):
-#             ix = self.predict1row(X[r,:])
-#             indices.append(ix)
-#         return np.array(indices, dtype=np.int)
-    
-#     def save(self, path):
-#         pass
-#     
-    @staticmethod
-    def load(path):
-        fd = open(path, "rb")
-        vd = VisualDictionaryBinaryFeature()
-        vd.numWords = pickle.load(fd)
-        vd.numFeatures = pickle.load(fd)
-        vd.featureDetector = cv2.ORB_create(vd.numFeatures)
-        vd.descriptors = pickle.load(fd)
-        vd.bestLabels = pickle.load(fd)
-        vd.cluster_centers = pickle.load(fd)
-        fd.close()
-        return vd
 
 
 class VLADDescriptor:
