@@ -139,6 +139,15 @@ class VisualDictionary():
 
 
 class VLADDescriptor:
+    '''
+    Aggregated descriptors from an image
+    
+    Parameters
+    ----------
+    - descriptors: computed VLAD descriptor of an image, unnormalized
+    - centroid_counters: keeps counts of related cluster centers over all descriptors
+      of this image
+    '''
     def __init__(self, imageDescriptors, dictionary):
         assert(isinstance(dictionary, VisualDictionary))
         self.descriptors, self.centroid_counters = VLADDescriptor.compute(imageDescriptors, dictionary)
