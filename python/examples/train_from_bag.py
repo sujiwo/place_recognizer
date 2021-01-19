@@ -12,11 +12,12 @@ from tqdm import tqdm
 from argparse import ArgumentParser, ArgumentError
 from copy import copy
 from place_recognizer import VisualDictionary, VLAD2, IncrementalBoW, GeographicTrajectory, GenericTrainer
+from place_recognizer.GenericImageMap import getEnhancementMethods
 
 
 class BagTrainer(GenericTrainer):
-    def __init__(self, method, mapfile_output, bagfilePath, imageTopic, mapfile_load=None, vdictionaryPath=None, desample=5.0, bagStart=0, bagStop=-1):
-        super(BagTrainer, self).__init__(method, mapfile_output, mapfile_load, vdictionaryPath)
+    def __init__(self, method, mapfile_output, bagfilePath, imageTopic, mapfile_load=None, vdictionaryPath=None, desample=5.0, bagStart=0, bagStop=-1, enhanceMethods=False):
+        super(BagTrainer, self).__init__(method, mapfile_output, mapfile_load, vdictionaryPath, useEnhancement=enhanceMethods)
 
         # Inspect the bag file
         self.trainBag = None
@@ -68,8 +69,21 @@ def main():
     _parser.add_argument("--start", type=float, metavar="second", default=0, help="Start mapping from offset")
     _parser.add_argument("--mask", type=str, default='', help='Image mask file')
     _parser.add_argument("--stop", type=float, metavar="second", default=-1, help="Stop mapping at offset from 0")
+    
+    enhanceMethods = getEnhancementMethods()
+    if len(enhanceMethods)!=0:
+        _parser.add_argument("--ime", type=str, choices=enhanceMethods, help='Preprocess image with this method')
+    else:
+        print("Enhancement not available; install im_enhance if you want")
+    
     prog_arguments = _parser.parse_args()
     
+    if hasattr(prog_arguments, 'ime') and (prog_arguments.ime is not None):
+        from place_recognizer.GenericImageMap import ime
+        imeMethod = eval('ime.' + prog_arguments.ime)
+    else:
+        imeMethod = False
+        
     trainer = BagTrainer(prog_arguments.method, 
                          prog_arguments.output, 
                          prog_arguments.bagfile, 
@@ -78,7 +92,8 @@ def main():
                          prog_arguments.dictionary, 
                          prog_arguments.desample, 
                          prog_arguments.start, 
-                         prog_arguments.stop)
+                         prog_arguments.stop,
+                         enhanceMethods=imeMethod)
     trainer.resize_factor = prog_arguments.resize
     if prog_arguments.mask!='':
         trainer.initialMask = cv2.imread(prog_arguments.mask, cv2.IMREAD_GRAYSCALE)

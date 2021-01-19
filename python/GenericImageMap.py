@@ -24,6 +24,13 @@ except ImportError:
 _numOrbFeatures = 6000
 
 
+def getEnhancementMethods():
+    if _hasEnhancement:
+        return [m for m in dir(ime) if m[0:2]!='__']
+    else:
+        return []
+
+
 class GenericTrainer(object):
     '''
     Base Class for training/building map file for IncrementalBoW and VLAD
@@ -61,7 +68,7 @@ class GenericTrainer(object):
         self.method = method
         self.mapfile_output = mapfile_output
         self.imageMetadata = []
-        self.useEnhancement = useEnhancement and _hasEnhancement
+        self.useEnhancement = callable(useEnhancement) and _hasEnhancement
         
         # Prepare the map
         if (mapfile_load):
@@ -78,6 +85,10 @@ class GenericTrainer(object):
                 self.mapper = IncrementalBoW()
                 
         self.createFeatureExtractor()
+        self.wb = cv2.xphoto.createGrayworldWB()
+        
+        if (self.useEnhancement==True):
+            self.enhanceMethod = useEnhancement
         
         # Image ID
         self.imageIdNext = self.mapper.lastImageId()
@@ -96,9 +107,10 @@ class GenericTrainer(object):
         - generate masks for feature extraction
         """
         imgprep = cv2.resize(image, (0,0), None, fx=self.resize_factor, fy=self.resize_factor)
+        imgprep = self.wb.balanceWhite(imgprep)
         
         if self.useEnhancement==True:
-            imgprep = ime.multiScaleRetinexCP(imgprep)
+            imgprep = self.enhanceMethod(imgprep)
         
         if _hasSegment==True:
             if (imgprep.shape[0:2]!=self.initialMask.shape[0:2]):
@@ -126,8 +138,8 @@ class GenericTrainer(object):
             
     def drawImageFrame(self, image_prep, keypoints, descriptors):
         if self.show_image_frame:
-            image_withKp = cv2.drawKeypoints(image_prep, keypoints, None, (0,255,0))
-            cv2.imshow("Image", image_withKp)
+#             image_withKp = cv2.drawKeypoints(image_prep, keypoints, None, (0,255,0))
+            cv2.imshow("Image", image_prep)
             cv2.waitKey(1)
 
     def initTrain(self):

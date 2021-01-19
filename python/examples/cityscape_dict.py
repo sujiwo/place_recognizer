@@ -35,15 +35,17 @@ if __name__=="__main__":
     cmdArgs = parser.parse_args()
 
     dataset = CityscapeDataset(cmdArgs.source_dataset)
+    dataset.resize = cmdArgs.resize
     visdict = VisualDictionary(numWords=256, numFeaturesOnImage=6000)
     
     print("Reading all images...")
     if cmdArgs.random!=-1:
-        samples = random.sample(dataset, cmdArgs.random)
+        samples = random.sample(range(len(dataset)), cmdArgs.random)
     else:
-        samples = dataset
+        samples = range(len(dataset))
         
-    for img in tqdm(samples):
+    for ip in tqdm(samples):
+        img = dataset[ip]
         visdict.train(img)
         cv2.imshow('image', img)
         cv2.waitKey(1)

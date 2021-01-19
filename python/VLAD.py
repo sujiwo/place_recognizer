@@ -29,7 +29,7 @@ class VisualDictionary():
         self.featureDetector = cv2.ORB_create(numFeaturesOnImage)
         self.descriptors = []
         self.cluster_centers = []
-        self.centerCounts = np.zeros((self.numWords,), dtype=np.uint64)
+#         self.centerCounts = np.zeros((self.numWords,), dtype=np.uint64)
         
     def train(self, image):
         keypts, descrs = self.featureDetector.detectAndCompute(image, None)
@@ -42,10 +42,10 @@ class VisualDictionary():
         compactness, bestLabels, self.cluster_centers = cv2.kmeans(self.descriptors, self.numWords, None, criteria, 5, cv2.KMEANS_PP_CENTERS)
         
         # Put sum of all descriptors
-        print("Building summation of all centers")
-        for i in range(len(bestLabels)):
-            lbl = bestLabels[i]
-            self.centerCounts[lbl] += 1
+#         print("Building summation of all centers")
+#         for i in range(len(bestLabels)):
+#             lbl = bestLabels[i]
+#             self.centerCounts[lbl] += 1
         print("Done")
     
     # Outputs the index of nearest center using single feature
@@ -65,7 +65,7 @@ class VisualDictionary():
             indices.append(ix)
         return np.array(indices, dtype=np.int)
     
-    def adapt(self, newDescriptors, dryRun=False):
+    def _adapt(self, newDescriptors, dryRun=False):
         """
         Adjust cluster centers to new set of descriptors as moving averages
         @param newDescriptors: numpy.ndarray    Set of new descriptors
@@ -86,6 +86,25 @@ class VisualDictionary():
         else:
             self.cluster_centers = movingAverage
             self.centerCounts += descCount
+            
+    def adapt(self, newDescriptors, dryRun=False):
+        assert(newDescriptors.dtype==self.cluster_centers.dtype)
+        descCenters = self.predict(newDescriptors)
+        movingAverage = np.zeros(self.cluster_centers.shape, dtype=np.float64)
+        descCount = np.zeros(self.numWords, dtype=np.uint64)
+        for i in range(newDescriptors.shape[0]):
+            c = descCenters[i]
+            descCount[c] += 1
+            movingAverage[c] += newDescriptors[i]
+        for i in range(self.numWords):
+            movingAverage[i] /= float(descCount[i])
+        movingAverage = (self.cluster_centers + movingAverage.astype(np.float32)) /2
+        if dryRun==True:
+            return movingAverage
+        else:
+            self.cluster_centers = movingAverage
+#             self.centerCounts += descCount
+        
     
     def save(self, path):
         """
@@ -95,7 +114,7 @@ class VisualDictionary():
         pickle.dump(self.numWords, fd, protocol=_pickleProtocol)
         pickle.dump(self.numFeatures, fd, protocol=_pickleProtocol)
         pickle.dump(self.cluster_centers, fd, protocol=_pickleProtocol)
-        pickle.dump(self.centerCounts, fd, protocol=_pickleProtocol)
+#         pickle.dump(self.centerCounts, fd, protocol=_pickleProtocol)
         fd.close()
         
     @staticmethod
@@ -121,7 +140,7 @@ class VisualDictionary():
         vd.numFeatures = pickle.load(fd)
         vd.cluster_centers = pickle.load(fd)
         vd.featureDetector = cv2.ORB_create(vd.numFeatures)
-        vd.centerCounts = pickle.load(fd)
+#         vd.centerCounts = pickle.load(fd)
         fd.close()
         return vd
     
