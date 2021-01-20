@@ -8,6 +8,8 @@ import numpy as np
 import rospy
 from rospy import Time, Duration
 from bisect import bisect_left
+import math
+from tf import transformations as tfx
 
 
 class GeographicTrajectory:
@@ -119,17 +121,26 @@ class GeographicTrajectory:
     @staticmethod
     def _parseFromNavSatFix(randomBag, eastingShift=0.0, northingShift=0.0, heightShift=0.0):
         assert(randomBag.type()=='sensor_msgs/NavSatFix')
-        parsedCoordinates = np.zeros((len(randomBag),3), dtype=np.float)
+        parsedCoordinates = np.zeros((len(randomBag),7), dtype=np.float)
         timestamps = []
         i = 0
         for rawmsg in tqdm(randomBag):
             coord = utm.fromLatLong(rawmsg.latitude, rawmsg.longitude, rawmsg.altitude)
-            parsedCoordinates[i,:] = [coord.easting+eastingShift, coord.northing+northingShift, coord.altitude+heightShift]
+            parsedCoordinates[i,0:3] = [coord.easting+eastingShift, coord.northing+northingShift, coord.altitude+heightShift]
+            if i>=1:
+                quat = GeographicTrajectory.orientationFromPositionOnlyYaw(parsedCoordinates[i], parsedCoordinates[i-1])
+                parsedCoordinates[i,3:7] = quat
+                if i==1:
+                    parsedCoordinates[0,3:7] = quat
             timestamps.append(rawmsg.header.stamp)
             i+=1
         return timestamps, parsedCoordinates
         
-
+    @staticmethod
+    def orientationFromPositionOnlyYaw(curPosition, prevPosition):
+        yaw = math.atan2(curPosition[1]-prevPosition[1], curPosition[0]-prevPosition[0])
+        return tfx.quaternion_from_euler(0, 0, yaw)
+        
 
 if __name__=='__main__' :
     tgbag = RandomAccessBag('/Data/MapServer/Logs/log_2016-12-26-13-21-10.bag', '/nmea_sentence')
