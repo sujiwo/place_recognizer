@@ -62,6 +62,7 @@ install(
 		GeographicCoordinate.py
 		ImageSubscriber.py
 		GenericImageMap.py
+		MiscProcess.py
 	DESTINATION
 		${CATKIN_PACKAGE_PYTHON_DESTINATION} )
 

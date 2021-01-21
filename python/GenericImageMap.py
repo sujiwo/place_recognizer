@@ -41,6 +41,7 @@ class GenericTrainer(object):
     - initialMask: Image mask to be used by ORB descriptor
     - resize_factor: Resize image frame by this factor
     - show_image_frame: whether to show incoming image frame after preprocessed 
+    - enhanceMethod: function to be called for performing image enhancement
     
     Parameters
     ----------
@@ -84,18 +85,23 @@ class GenericTrainer(object):
             elif method=="ibow":
                 self.mapper = IncrementalBoW()
                 
-        self.createFeatureExtractor()
-        self.wb = cv2.xphoto.createGrayworldWB()
+        self.prepare()
+        
         
         if (self.useEnhancement==True):
             self.enhanceMethod = useEnhancement
+        else:
+            self.enhanceMethod = None
         
         # Image ID
         self.imageIdNext = self.mapper.lastImageId()
         
-    def createFeatureExtractor(self):
+    def prepare(self):
         # Feature extractor
         self.extractor = cv2.ORB_create(self.numFeatures)
+        
+        # White Balance
+        self.wb = cv2.xphoto.createGrayworldWB()
     
     def preprocess(self, image):
         """
@@ -254,7 +260,7 @@ class GenericImageDatabase(GenericTrainer):
     def __init__(self, mapfile_load, useEnhancement=False):
         self.useEnhancement = useEnhancement and _hasEnhancement
         self.mapper, self.imageMetadata, header = GenericImageDatabase.loadMap(mapfile_load)
-        self.createFeatureExtractor()
+        self.prepare()
         
     def initTrain(self):
         raise NotImplementedError("ImageDatabase does not implement training")
