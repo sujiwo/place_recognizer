@@ -20,20 +20,29 @@ class BagTrainer(GenericTrainer):
         super(BagTrainer, self).__init__(method, mapfile_output, mapfile_load, vdictionaryPath, useEnhancement=enhanceMethods)
 
         # Inspect the bag file
-        self.trainBag = None
-        allBagConns = RandomAccessBag.getAllConnections(bagfilePath)
-        trajectorySrc = None
-        for bg in allBagConns:
-            if bg.topic()==imageTopic:
-                self.trainBag = ImageBag(bagfilePath, imageTopic)
-                print("Using {} as image source".format(self.trainBag.topic()))
-            elif bg.type() in GeographicTrajectory.supportedMsgTypes:
-                self.trajectorySrc = GeographicTrajectory(bg)
-                print("Using {} as trajectory source".format(bg.topic()))
-        if (not self.trainBag):
-            raise ArgumentError("Image topic is invalid")
+        self.trainBag, trajectoryBag = BagTrainer.probeBagForImageAndTrajectory(bagFilePath, imageTopic)
+        print("Using {} as image source".format(self.trainBag.topic()))
+        print("Using {} as trajectory source".format(bg.topic()))
+        self.trajectorySrc = GeographicTrajectory(trajectoryBag)
                 
         self.sampleList = self.trainBag.desample(desample, True, bagStart, bagStop)
+        
+    @staticmethod
+    def probeBagForImageAndTrajectory(bagFilePath, imageTopic=None, trajectoryTopic=None):
+        allBagConns = RandomAccessBag.getAllConnections(bagFilePath)
+        trajectorySrc = None
+        imageBag = None
+        for bg in allBagConns:
+            if bg.type()=="sensor_msgs/Image" or bg.type()=="sensor_msgs/CompressedImage":
+                if imageTopic is None:
+                    imageBag = ImageBag(bagFilePath, bg.topic())
+                elif bg.topic()==imageTopic:
+                    imageBag = ImageBag(bagfilePath, imageTopic)
+            elif bg.type() in GeographicTrajectory.supportedMsgTypes:
+                trajectorySrc = bg
+        if (not imageBag):
+            raise ArgumentError("Image topic is invalid")
+        return imageBag, trajectorySrc
                 
     def runTraining(self):
         # Not taking all images

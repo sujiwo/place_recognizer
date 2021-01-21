@@ -14,11 +14,54 @@ from geodesy import utm
 import cv2
 import sys
 from argparse import ArgumentParser
-from place_recognizer import GenericImageDatabase
+from place_recognizer import GenericImageDatabase, GeographicTrajectory
 from place_recognizer.GenericImageMap import getEnhancementMethods
+from train_from_bag import BagTrainer
 
 
 resizeFactor = 0.533333333
+
+
+class QueryFromBag (object):
+    """
+    Class to run query from a bag file and collect results in Python pickled file
+    
+    Parameters
+    ----------
+    - imageBag
+    - trajectory
+    - startOffset
+    - stopOffset
+    - numToReturn:
+    """
+    startOffset = 0
+    stopOffset = -1
+    numToReturn = 10
+    numCPU = 1
+    output_path = None
+    
+    def __init__ (self, bag_path, map_file_path, image_topic=None, enhanceMethod=None):
+        self.imageBag, self.trajectoryBag = BagTrainer.probeBagForImageAndTrajectory(bag_path, image_topic)
+        self.engine = GenericImageDatabase(map_file_path)
+        if callable(enhanceMethod):
+            self.engine.useEnhancement = True
+            self.engine.enhanceMethod = enhanceMethod
+        self.bagLock = Lock()
+
+    def processQuery(self, i):
+        self.bagLock.acquire()
+        img = self.imageBag[i]
+        self.bagLock.release()
+        return self.engine.query(image, numOfImages=self.numToReturn)
+
+    def runQuery(self):
+        samples = self.imageBag.desample(-1, True, startOffsetTime=self.startOffset, stopOffsetTime=self.stopOffset)
+        print("Ready")
+        pool4 = mlc.SuperPool(n_cpu=self.numCPU)
+        positions = pool4.map(self.processQuery, samples)
+        print("Done")
+        
+        return positions
 
 
 def processQuery(i):
@@ -64,7 +107,7 @@ if __name__=="__main__":
     
     print("Ready")
     pool4 = mlc.SuperPool(n_cpu=1)
-    samples = queryBag.desample(hz=-1, True, cmdArgs.start, cmdArgs.stop)
+    samples = queryBag.desample(-1, True, cmdArgs.start, cmdArgs.stop)
     positions = pool4.map(processQuery, samples)
     mlc.save(positions, cmdArgs.output)
     print("Done")

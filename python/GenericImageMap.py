@@ -41,6 +41,7 @@ class GenericTrainer(object):
     - initialMask: Image mask to be used by ORB descriptor
     - resize_factor: Resize image frame by this factor
     - show_image_frame: whether to show incoming image frame after preprocessed 
+    - useEnhancement: bool, set to enable image enhancement
     - enhanceMethod: function to be called for performing image enhancement
     
     Parameters
