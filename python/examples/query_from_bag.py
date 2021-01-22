@@ -30,8 +30,8 @@ class QueryFromBag (object):
     ----------
     - imageBag
     - trajectory
-    - startOffset
-    - stopOffset
+    - startOffset: start query from this second (0=start of bag)
+    - stopOffset: stop query at this second
     - numToReturn:
     """
     startOffset = 0
@@ -43,6 +43,7 @@ class QueryFromBag (object):
     def __init__ (self, bag_path, map_file_path, image_topic=None, enhanceMethod=None):
         self.imageBag, self.trajectoryBag = BagTrainer.probeBagForImageAndTrajectory(bag_path, image_topic)
         self.engine = GenericImageDatabase(map_file_path)
+        
         if callable(enhanceMethod):
             self.engine.useEnhancement = True
             self.engine.enhanceMethod = enhanceMethod
@@ -50,11 +51,17 @@ class QueryFromBag (object):
 
     def processQuery(self, i):
         self.bagLock.acquire()
-        img = self.imageBag[i]
+        image = self.imageBag[i]
         self.bagLock.release()
         return self.engine.query(image, numOfImages=self.numToReturn)
+    
+    def createQueryTrajectory(self):
+        pass
 
     def runQuery(self):
+        self.queryTrajectory = GeographicTrajectory(self.trajectoryBag)
+        # XXX: query trajectory should be made on specified time range
+        
         samples = self.imageBag.desample(-1, True, startOffsetTime=self.startOffset, stopOffsetTime=self.stopOffset)
         print("Ready")
         pool4 = mlc.SuperPool(n_cpu=self.numCPU)

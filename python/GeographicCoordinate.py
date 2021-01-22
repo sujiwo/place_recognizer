@@ -12,6 +12,10 @@ import math
 from tf import transformations as tfx
 
 
+_startTime0 = rospy.Time(0)
+_stopTime_1 = rospy.Time(0)
+
+
 class GeographicTrajectory:
     """
     This class represents position of vehicle in time, acquired from GNSS.
@@ -119,12 +123,18 @@ class GeographicTrajectory:
         return timestamps, parsedCoordinates
                 
     @staticmethod
-    def _parseFromNavSatFix(randomBag, eastingShift=0.0, northingShift=0.0, heightShift=0.0):
+    def _parseFromNavSatFix(randomBag, eastingShift=0.0, northingShift=0.0, heightShift=0.0, startTime=_startTime0, stopTime=_stopTime_1):
         assert(randomBag.type()=='sensor_msgs/NavSatFix')
-        parsedCoordinates = np.zeros((len(randomBag),7), dtype=np.float)
         timestamps = []
         i = 0
-        for rawmsg in tqdm(randomBag):
+        if startTime==_startTime0 and stopTime==_stopTime_1:
+            msgSamples = range(len(randomBag))
+        else:
+            msgSamples = randomBag.desample(-1, True, startTime, stopTime)
+        parsedCoordinates = np.zeros((len(msgSamples),7), dtype=np.float)
+        
+        for s in tqdm(msgSamples):
+            rawmsg = randomBag[s]
             coord = utm.fromLatLong(rawmsg.latitude, rawmsg.longitude, rawmsg.altitude)
             parsedCoordinates[i,0:3] = [coord.easting+eastingShift, coord.northing+northingShift, coord.altitude+heightShift]
             if i>=1:
