@@ -7,13 +7,15 @@ from geodesy import utm
 import numpy as np
 import rospy
 from rospy import Time, Duration
-from bisect import bisect_left
+from bisect import bisect_left, bisect
 import math
+import numbers
 from tf import transformations as tfx
 
 
 _startTime0 = rospy.Time(0)
 _stopTime_1 = rospy.Time(0)
+_timeFuzzyOffset = 0.25
 
 
 class GeographicTrajectory:
@@ -37,7 +39,7 @@ class GeographicTrajectory:
     
     supportedMsgTypes = ['sensor_msgs/NavSatFix', 'nmea_msgs/Sentence']
     
-    def __init__ (self, randomBag=None, eastingShift=0.0, northingShift=0.0, heightShift=0.0):
+    def __init__ (self, randomBag=None, eastingShift=0.0, northingShift=0.0, heightShift=0.0, startTime=_startTime0, stopTime=_stopTime_1):
         if (randomBag is None):
             self.timestamps = []
             self.coordinates = []
@@ -45,13 +47,32 @@ class GeographicTrajectory:
             return
         
         if (randomBag.type()=='sensor_msgs/NavSatFix'):
-            self.timestamps, self.coordinates = GeographicTrajectory._parseFromNavSatFix(randomBag, eastingShift, northingShift, heightShift)
+            self.timestamps, self.coordinates = GeographicTrajectory._parseFromNavSatFix(randomBag, 
+                eastingShift, 
+                northingShift, 
+                heightShift, 
+                startTime, stopTime)
         elif (randomBag.type()=='nmea_msgs/Sentence'):
-            self.timestamps, self.coordinates = GeographicTrajectory._parseFromNmea(randomBag, eastingShift, northingShift, heightShift)
+            self.timestamps, self.coordinates = GeographicTrajectory._parseFromNmea(randomBag, 
+                eastingShift, 
+                northingShift, 
+                heightShift,
+                startTime, stopTime)
         else:
             raise ValueError("Input bag is of unknown type")
+        
         self.duration = self.timestamps[-1] - self.timestamps[0]
         self.frame_id = randomBag[0].header.frame_id
+        
+    def __getitem__ (self, t):
+        if isinstance(t, numbers.Integral):
+            return {'timestamp': self.timestamps[t], 'pose': self.coordinates[t]}
+        if hasattr(t, "to_sec"):
+            if t<self.timestamps[0] or t>self.timestamps[-1]:
+                raise ValueError("Requested timestamp is out of range")
+            return {'timestamp': t, 'pose': self.positionAt(t)}
+        if isinstance(t, numbers.Real):
+            return {'timestamp': self.timestamps[0]+rospy.Duration.from_sec(t), 'pose': self.positionAt(t)}
         
     def __len__(self):
         return len(self.timestamps)
@@ -74,7 +95,8 @@ class GeographicTrajectory:
         t1 = self.timestamps[_t1]
         t2 = self.timestamps[_t1+1]
         r = ((time-t1).to_sec()) / (t2-t1).to_sec()
-        return self.coordinates[_t1] + (self.coordinates[_t1+1] - self.coordinates[_t1])*r
+#         return self.coordinates[_t1] + (self.coordinates[_t1+1] - self.coordinates[_t1])*r
+        return GeographicTrajectory.interpolate(self.coordinates[_t1], self.coordinates[_t1+1], r)
         
     def buildFromTimestamps(self, timestampList):
         """
@@ -94,14 +116,19 @@ class GeographicTrajectory:
         track.coordinates = np.array(track.coordinates)
         track.frame_id = self.frame_id
         return track
-            
+    
+    @staticmethod
+    def interpolate(pq1, pq2, ratio):
+        position = pq1[0:3] + (pq2[0:3] - pq1[0:3])*ratio
+        orientation = tfx.quaternion_slerp(pq1[3:7], pq2[3:7], ratio)
+        return np.append(position, orientation)
     
     @staticmethod
     def parseFromBag(randomBag):
         pass
     
     @staticmethod
-    def _parseFromNmea(randomBag, eastingShift=0.0, northingShift=0.0, heightShift=0.0):
+    def _parseFromNmea(randomBag, eastingShift=0.0, northingShift=0.0, heightShift=0.0, startTime=_startTime0, stopTime=_stopTime_1):
         try:
             import pynmea2
         except ImportError:
@@ -109,8 +136,10 @@ class GeographicTrajectory:
         
         parsedCoordinates = []
         timestamps = []
+        msgSamples = GeographicTrajectory._createTimeRange(randomBag, startTime, stopTime)
         i = 0
-        for rawmsg in tqdm(randomBag):
+        for s in tqdm(msgSamples):
+            rawmsg = randomBag[s]
             i += 1
             try:
                 m = pynmea2.parse(rawmsg.sentence)
@@ -127,10 +156,7 @@ class GeographicTrajectory:
         assert(randomBag.type()=='sensor_msgs/NavSatFix')
         timestamps = []
         i = 0
-        if startTime==_startTime0 and stopTime==_stopTime_1:
-            msgSamples = range(len(randomBag))
-        else:
-            msgSamples = randomBag.desample(-1, True, startTime, stopTime)
+        msgSamples = GeographicTrajectory._createTimeRange(randomBag, startTime, stopTime)
         parsedCoordinates = np.zeros((len(msgSamples),7), dtype=np.float)
         
         for s in tqdm(msgSamples):
@@ -145,6 +171,21 @@ class GeographicTrajectory:
             timestamps.append(rawmsg.header.stamp)
             i+=1
         return timestamps, parsedCoordinates
+    
+    @staticmethod
+    def _createTimeRange(randomBag, startTime, stopTime):
+        if startTime==_startTime0 and stopTime==_stopTime_1:
+            msgSamples = range(len(randomBag))
+        else:
+            if startTime==_startTime0:
+                startTime = randomBag.timestamps[0]
+            if stopTime==_stopTime_1:
+                stopTime = randomBag.timestamps[-1]
+            probeTime = startTime-Duration.from_sec(_timeFuzzyOffset)
+            if probeTime >= randomBag.timestamps[0]:
+                startTime = probeTime
+            msgSamples = randomBag.desample(-1, True, startTime, stopTime)
+        return msgSamples
         
     @staticmethod
     def orientationFromPositionOnlyYaw(curPosition, prevPosition):
