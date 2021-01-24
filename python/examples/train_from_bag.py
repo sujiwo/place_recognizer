@@ -5,6 +5,7 @@ This script is used to perform visual training to create a topological map.
 Data source comes from a ROS Bag
 """
 
+import rosbag
 from RandomAccessBag import RandomAccessBag, ImageBag
 import cv2
 import sys
@@ -15,18 +16,21 @@ from place_recognizer import VisualDictionary, VLAD2, IncrementalBoW, Geographic
 from place_recognizer.GenericImageMap import getEnhancementMethods
 
 
-class BagTrainer(GenericTrainer):
-    def __init__(self, method, mapfile_output, bagfilePath, imageTopic, mapfile_load=None, vdictionaryPath=None, desample=5.0, bagStart=0, bagStop=-1, enhanceMethods=False):
-        super(BagTrainer, self).__init__(method, mapfile_output, mapfile_load, vdictionaryPath, useEnhancement=enhanceMethods)
-
-        # Inspect the bag file
-        self.trainBag, trajectoryBag = BagTrainer.probeBagForImageAndTrajectory(bagFilePath, imageTopic)
-        print("Using {} as image source".format(self.trainBag.topic()))
-        print("Using {} as trajectory source".format(bg.topic()))
-        self.trajectorySrc = GeographicTrajectory(trajectoryBag)
-                
-        self.sampleList = self.trainBag.desample(desample, True, bagStart, bagStop)
-        
+class ImageBagWithPose(ImageBag):
+    """
+    Image source that returns image and pose at each index
+    """
+    def __init__ (self, bagfilePath, imageTopic=None, poseTopic=None, frequency=-1, startTime=0, stopTime=-1):
+        self.bag = rosbag.Bag(bagfilePath, mode="r")
+        ImageBag.__init__(self, self.bag, imageTopic)
+        self.desample(frequency, startTime=startTime, stopTime=stopTime)
+    
+    def __getitem__ (self, i):
+        pass
+    
+    def close(self):
+        self.bag.close()
+    
     @staticmethod
     def probeBagForImageAndTrajectory(bagFilePath, imageTopic=None, trajectoryTopic=None):
         allBagConns = RandomAccessBag.getAllConnections(bagFilePath)
@@ -43,7 +47,21 @@ class BagTrainer(GenericTrainer):
         if (not imageBag):
             raise ArgumentError("Image topic is invalid")
         return imageBag, trajectorySrc
+
+
+
+class BagTrainer(GenericTrainer):
+    def __init__(self, method, mapfile_output, bagfilePath, imageTopic, mapfile_load=None, vdictionaryPath=None, desample=5.0, bagStart=0, bagStop=-1, enhanceMethods=False):
+        super(BagTrainer, self).__init__(method, mapfile_output, mapfile_load, vdictionaryPath, useEnhancement=enhanceMethods)
+
+        # Inspect the bag file
+        self.trainBag, self.trajectoryBag = ImageBagWithPose.probeBagForImageAndTrajectory(bagFilePath, imageTopic)
+        print("Using {} as image source".format(self.trainBag.topic()))
+        print("Using {} as trajectory source".format(bg.topic()))
+        self.trajectorySrc = GeographicTrajectory(self.trajectoryBag)
                 
+        self.sampleList = self.trainBag.desample(desample, True, bagStart, bagStop)
+        
     def runTraining(self):
         # Not taking all images
         
