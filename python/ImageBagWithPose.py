@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 
+import rospy
 import rosbag
 from RandomAccessBag import RandomAccessBag, ImageBag
 import cv2
@@ -8,26 +9,37 @@ from tqdm import tqdm
 from argparse import ArgumentParser, ArgumentError
 from copy import copy
 from .GeographicCoordinate import GeographicTrajectory
+from numbers import Number
 
 
 class ImageBagWithPose(ImageBag):
     """
     Image source that returns image and pose at each index
     """
-    def __init__ (self, bagfilePath, imageTopic=None, poseTopic=None, frequency=-1, startTime=0, stopTime=-1):
-        if (isinstance(bagfilePath, str)):
+    def __init__ (self, bagFd, imageTopic=None, poseTopic=None, frequency=-1, startTime=0, stopTime=-1):
+        if (isinstance(bagFd, str)):
             self.bag = rosbag.Bag(bagFd, mode="r")
         else:
-            assert(type(bagfilePath)==rosbag.bag.Bag)
-            self.bag = bagfilePath
+            assert(type(bagFd)==rosbag.bag.Bag)
+            self.bag = bagFd
         imageTopic = ImageBagWithPose.probeImageTopic(self.bag, imageTopic)[0]
         poseTopic = ImageBagWithPose.probeTrajectoryTopic(self.bag, poseTopic)[0]
         
-        ImageBag.__init__(self, self.bag, imageTopic)
-        self.desample(frequency, startTime=startTime, stopTime=stopTime)
+        super(ImageBagWithPose, self).__init__(self.bag, imageTopic)
+        originStartTime = self.timestamps[-1]
+        super(ImageBagWithPose, self).desample(frequency, startTime=startTime, stopTime=stopTime)
         
-        self.trajectoryBag = RandomAccessBag(self.bag, poseTopic, start_time, stopTime)
+        if stopTime!=-1:
+            if isinstance(stopTime, Number):
+                trajStopTime = originStartTime + rospy.Duration(stopTime + 0.1)
+            else: trajStopTime = stopTime
+        else: trajStopTime = None
+        self.trajectoryBag = RandomAccessBag(self.bag, poseTopic)
+        self.trajectoryBag.desample(-1, startOffsetTime=startTime, stopOffsetTime=stopTime)
 #         self.trajectory = GeographicTrajectory
+    
+    def __repr__(self):
+        return "Image bag with positions of each frame, topic={}".format(self.topic())
     
     def __getitem__ (self, i):
         pass
@@ -92,6 +104,9 @@ class ImageBagWithPose(ImageBag):
         return trajectoryTopics
         
         return trajectoryTopics
+    
+    def desample(self, hz=-1, onlyMsgList=False, startTime=0.0, stopTime=-1):
+        raise NotImplementedError("The image bag has already been desampled")
     
     @staticmethod
     def probeBagForImageAndTrajectory(bagFilePath, imageTopic=None, trajectoryTopic=None):
