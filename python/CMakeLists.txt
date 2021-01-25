@@ -63,6 +63,7 @@ install(
 		ImageSubscriber.py
 		GenericImageMap.py
 		MiscProcess.py
+		ImageBagWithPose.py
 	DESTINATION
 		${CATKIN_PACKAGE_PYTHON_DESTINATION} )
 

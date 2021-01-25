@@ -7,4 +7,4 @@ from .GeographicCoordinate import GeographicTrajectory
 from .ImageSubscriber import ImageSubscriber
 from .GenericImageMap import *
 from .MiscProcess import *
-
+from .ImageBagWithPose import *

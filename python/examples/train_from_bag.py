@@ -12,42 +12,8 @@ import sys
 from tqdm import tqdm
 from argparse import ArgumentParser, ArgumentError
 from copy import copy
-from place_recognizer import VisualDictionary, VLAD2, IncrementalBoW, GeographicTrajectory, GenericTrainer
+from place_recognizer import VisualDictionary, VLAD2, IncrementalBoW, GeographicTrajectory, GenericTrainer, ImageBagWithPose
 from place_recognizer.GenericImageMap import getEnhancementMethods
-
-
-class ImageBagWithPose(ImageBag):
-    """
-    Image source that returns image and pose at each index
-    """
-    def __init__ (self, bagfilePath, imageTopic=None, poseTopic=None, frequency=-1, startTime=0, stopTime=-1):
-        self.bag = rosbag.Bag(bagfilePath, mode="r")
-        ImageBag.__init__(self, self.bag, imageTopic)
-        self.desample(frequency, startTime=startTime, stopTime=stopTime)
-    
-    def __getitem__ (self, i):
-        pass
-    
-    def close(self):
-        self.bag.close()
-    
-    @staticmethod
-    def probeBagForImageAndTrajectory(bagFilePath, imageTopic=None, trajectoryTopic=None):
-        allBagConns = RandomAccessBag.getAllConnections(bagFilePath)
-        trajectorySrc = None
-        imageBag = None
-        for bg in allBagConns:
-            if bg.type()=="sensor_msgs/Image" or bg.type()=="sensor_msgs/CompressedImage":
-                if imageTopic is None:
-                    imageBag = ImageBag(bagFilePath, bg.topic())
-                elif bg.topic()==imageTopic:
-                    imageBag = ImageBag(bagfilePath, imageTopic)
-            elif bg.type() in GeographicTrajectory.supportedMsgTypes:
-                trajectorySrc = bg
-        if (not imageBag):
-            raise ArgumentError("Image topic is invalid")
-        return imageBag, trajectorySrc
-
 
 
 class BagTrainer(GenericTrainer):
