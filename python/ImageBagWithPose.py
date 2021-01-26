@@ -29,19 +29,21 @@ class ImageBagWithPose(ImageBag):
         originStartTime = self.timestamps[-1]
         super(ImageBagWithPose, self).desample(frequency, startTime=startTime, stopTime=stopTime)
         
-        if stopTime!=-1:
-            if isinstance(stopTime, Number):
-                trajStopTime = originStartTime + rospy.Duration(stopTime + 0.1)
-            else: trajStopTime = stopTime
-        else: trajStopTime = None
         self.trajectoryBag = RandomAccessBag(self.bag, poseTopic)
-        self.trajectoryBag.desample(-1, startOffsetTime=startTime, stopOffsetTime=stopTime)
-#         self.trajectory = GeographicTrajectory
+        self._createTrajectory()
+
+    def _createTrajectory(self):
+        self.trajectory = GeographicTrajectory(self.trajectoryBag, 
+            startTime=self.timestamps[0], 
+            stopTime=self.timestamps[-1]). \
+            buildFromTimestamps(self.timestamps)
     
     def __repr__(self):
         return "Image bag with positions of each frame, topic={}".format(self.topic())
     
     def __getitem__ (self, i):
+        return {"image":super(ImageBagWithPose,self).__getitem__(i),
+            "pose":self.trajectory[i]["pose"]}
         pass
     
     def close(self):
