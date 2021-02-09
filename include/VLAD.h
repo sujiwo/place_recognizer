@@ -21,11 +21,17 @@ namespace PlaceRecognizer {
 
 struct VisualDictionary
 {
+	friend class VLAD;
+	friend struct VLADDescriptor;
+
 	VisualDictionary(uint _numWords=256) :
 		numWords(_numWords)
 	{}
 
-	VisualDictionary(const cv::Mat& precomputedCenters);
+	void setCenters(const cv::Mat& precomputedCenters);
+
+	VisualDictionary(const cv::Mat& precomputedCenters)
+	{ setCenters(precomputedCenters); }
 
 	bool build (cv::Mat &descriptors);
 
@@ -37,6 +43,9 @@ struct VisualDictionary
 
 	void
 	predict(const cv::Mat &imageDescriptors, cv::Mat &out) const;
+
+	cv::Mat
+	adapt(cv::InputArray newDescriptors, bool dryRun=false);
 
 	/*
 	 * Returns descriptors for the centroids
@@ -52,6 +61,29 @@ protected:
 };
 
 
+struct VLADDescriptor
+{
+	VLADDescriptor(const cv::InputArray imageDescriptors, const VisualDictionary &dict)
+	{
+		auto M = imageDescriptors.getMat();
+		compute(M, dict);
+	}
+
+	void compute(const cv::Mat &imageDescriptors, const VisualDictionary &dict);
+
+	cv::Mat normalized() const;
+
+	cv::Mat flattened() const;
+
+	void adaptNewCentroids(const VisualDictionary &newDict, const cv::Mat &oldCentroids);
+
+	// The resulting aggregated (VLAD) descriptor, unnormalized
+	cv::Mat descriptors;
+	std::vector<uint> centroid_counters;
+};
+
+
+
 class VLAD {
 public:
 	VLAD(uint numWords=256, uint leafSize=40);
@@ -59,7 +91,7 @@ public:
 
 	void initTrain();
 
-	void addImage(uint imageId, const std::vector<cv::KeyPoint> &keypoints, const cv::Mat &descriptors);
+	void addImage(const std::vector<cv::KeyPoint> &keypoints, const cv::Mat &descriptors, uint imageId=-1);
 
 	void stopTrain();
 
@@ -68,6 +100,9 @@ public:
 	bool save(const std::string &path);
 	bool load(const std::string &path);
 
+	uint lastImageId() const
+	{ return vDescriptors.size(); }
+
 protected:
 	uint leafSize;
 	VisualDictionary vDict;
@@ -75,9 +110,15 @@ protected:
 
 	// training data structures
 	std::vector<cv::Mat> trainDescriptors;
-	std::map<uint, std::vector<uint>> imageIdsToDescriptors;
+	std::vector<std::pair<uint,uint>> trainDescriptorPtr;
+
+	std::vector<VLADDescriptor> vDescriptors;
 
 	cv::Mat computeVlad(const cv::Mat &descriptors) const;
+
+	void rebuildVladDescriptors(const cv::Mat &oldDict);
+
+	cv::Mat flatNormalDescriptors() const;
 };
 
 } /* namespace PlaceRecognizer */

@@ -1,32 +1,29 @@
 #include <iostream>
-#include "pam.h"
-#include "npy.hpp"
 #include <random>
 #include <limits>
 
 #include "opencv2/core.hpp"
+#include "VLAD.h"
 
 using namespace std;
 using namespace PlaceRecognizer;
 
 int main(int argc, char *argv[])
 {
-	auto descriptors = npy::loadMat(argv[1]);
-	int K = atoi(argv[2]);
-	cout << descriptors.rows << 'x' << descriptors.cols << endl;
+	cv::Mat M = cv::Mat::zeros(5, 3, CV_32SC1),
+		I = cv::Mat::ones(1, 3, CV_32SC1);
 
-	CvDistMatrix CM(descriptors);
-	LAB pamInit(&CM);
+	// This statement has no effect
+	M.row(0) = I;
 
-	FastCLARA kmediods(descriptors.rows, &CM, &pamInit, K, 300, 0, 5, 80*4*K, true);
-	auto d = kmediods.run();
+	// This statement succeed
+	M.row(0) = cv::Mat::ones(1, 3, CV_32SC1);
 
-	auto md = kmediods.getMedoids();
-	cv::Mat medoids(md.size(), descriptors.cols, CV_8UC1);
-	for (int i=0; i<md.size(); i++) {
-		descriptors.row(md[i]).copyTo(medoids.row(i));
-	}
-	npy::saveMat(medoids, "/tmp/medoids.npy");
+	// This also good
+	I.copyTo(M.row(3));
 
+	M = M.reshape(0, 1);
+
+	cout << M << endl;
 	return 0;
 }
