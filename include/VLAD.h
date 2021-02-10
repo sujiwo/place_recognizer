@@ -41,9 +41,6 @@ struct VisualDictionary
 	std::vector<uint>
 	predict(const cv::Mat &imageDescriptors) const;
 
-	void
-	predict(const cv::Mat &imageDescriptors, cv::Mat &out) const;
-
 	cv::Mat
 	adapt(cv::InputArray newDescriptors, bool dryRun=false);
 
@@ -57,7 +54,7 @@ protected:
 	uint numWords;
 	cv::Mat centers;
 
-	uint predict1row(const cv::Mat &descriptor) const;
+	uint predict1row(const cv::Mat &descriptors, int rowNum) const;
 };
 
 

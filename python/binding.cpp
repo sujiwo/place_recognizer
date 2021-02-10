@@ -8,6 +8,7 @@
 #include <iostream>
 #include <vector>
 #include "IncrementalBoW.h"
+#include "VLAD.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
@@ -22,6 +23,9 @@
 //using namespace std;
 namespace py = pybind11;
 using namespace pybind11::literals;
+
+template <typename... Args>
+using overload_cast_ = pybind11::detail::overload_cast_impl<Args...>;
 
 
 void module_init()
@@ -152,6 +156,13 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 
 			.def("lastImageId", &xIBoW::lastImageId);
 		;
+
+	py::class_<PlaceRecognizer::VisualDictionary> (mod, "cVisualDictionary")
+		.def( py::init<>() )
+		.def("setCenters", &PlaceRecognizer::VisualDictionary::setCenters)
+		.def("getCenters", &PlaceRecognizer::VisualDictionary::getCenters)
+		.def("predict", &PlaceRecognizer::VisualDictionary::predict, "Doc" )
+	;
 
 }
 

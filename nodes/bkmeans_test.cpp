@@ -22,8 +22,11 @@ int main(int argc, char *argv[])
 	// This also good
 	I.copyTo(M.row(3));
 
-	M = M.reshape(0, 1);
+	cv::Mat R;
+	cv::repeat(I, 5, 1, R);
 
 	cout << M << endl;
+	cout << endl;
+	cout << R << endl;
 	return 0;
 }

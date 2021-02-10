@@ -21,8 +21,8 @@ void
 VLADDescriptor::compute(const cv::Mat &imageDescriptors, const VisualDictionary &dict)
 {
 	// XXX: Unfinished
-	cv::Mat predictedLabels;
-	dict.predict(imageDescriptors, predictedLabels);
+	auto predictedLabels = dict.predict(imageDescriptors);
+
 	auto centers = dict.getCenters();
 	int k = centers.rows,
 		m = imageDescriptors.rows,
@@ -32,17 +32,10 @@ VLADDescriptor::compute(const cv::Mat &imageDescriptors, const VisualDictionary 
 
 	for (auto r=0; r<imageDescriptors.rows; ++r) {
 		auto descRow = imageDescriptors.row(r);
-		auto label = predictedLabels.at<int>(0, r);
+		auto label = predictedLabels[r];
 		centroid_counters[label] += 1;
 		descriptors.row(label) += (descRow - centers.row(label));
 	}
-/*
-	for (int i=0; i<k; ++k) {
-		centroid_counters[i] = cv::countNonZero(predictedLabels==i);
-		if (centroid_counters[i] > 0) {
-		}
-	}
-*/
 }
 
 
@@ -110,24 +103,19 @@ VisualDictionary::predict (const cv::Mat &imageDescriptors)
 const
 {
 	vector<uint> prd(imageDescriptors.rows);
-	// XXX: Parallelize this
-	for (int i=0; i<imageDescriptors.rows; ++i) {
-		auto c = predict1row(imageDescriptors.row(i));
-		prd[i] = c;
+
+	cv::Mat descfloat;
+	if (imageDescriptors.type()!=CV_32FC1)
+		imageDescriptors.convertTo(descfloat, CV_32FC1);
+	else descfloat = imageDescriptors;
+
+#pragma omp parallel for
+	for (int r=0; r<imageDescriptors.rows; ++r) {
+		auto c = predict1row(descfloat, r);
+		prd[r] = c;
 	}
 	return prd;
 }
-
-void
-VisualDictionary::predict(const cv::Mat &imageDescriptors, cv::Mat &prd) const
-{
-	prd = cv::Mat::zeros(1, imageDescriptors.rows, CV_32SC1);
-	for (int i=0; i<imageDescriptors.rows; ++i) {
-		auto c = predict1row(imageDescriptors.row(i));
-		prd.at<int>(0,i) = c;
-	}
-}
-
 
 cv::Mat
 VisualDictionary::adapt(cv::InputArray newDescriptors, bool dryRun)
@@ -155,19 +143,25 @@ VisualDictionary::adapt(cv::InputArray newDescriptors, bool dryRun)
 
 
 uint
-VisualDictionary::predict1row(const cv::Mat &descriptor) const
+VisualDictionary::predict1row(const cv::Mat &descriptors, int rowNum) const
 {
-	assert(descriptor.rows==1 && descriptor.cols==centers.cols);
-
-	cv::Mat descfloat;
-	if (descriptor.type()!=CV_32FC1)
-		descriptor.convertTo(descfloat, CV_32FC1);
-	else descfloat = descriptor;
-
-	vector<double> norms2(numWords);
+/*
+	vector<float> norms2(numWords);
 	for (int i=0; i<numWords; ++i)
-		norms2[i] = cv::norm(centers.row(i) - descfloat);
+		norms2[i] = cv::norm(centers.row(i) - descriptors.row(rowNum));
 	return min_element(norms2.begin(), norms2.end()) - norms2.begin();
+*/
+	cv::Mat tmp(numWords, descriptors.cols, CV_32F),
+		sum(numWords, 1, CV_32F);
+
+	cv::repeat(descriptors.row(rowNum), numWords, 1, tmp);
+	tmp -= centers;
+	tmp = tmp.mul(tmp);
+	cv::reduce(tmp, sum, 1, cv::REDUCE_SUM);
+	cv::sqrt(sum, sum);
+	int minloc;
+	cv::minMaxIdx(sum, 0, 0, &minloc, NULL);
+	return minloc;
 }
 
 
