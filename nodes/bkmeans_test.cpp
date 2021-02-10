@@ -1,6 +1,7 @@
 #include <iostream>
 #include <random>
 #include <limits>
+#include <numeric>
 
 #include "opencv2/core.hpp"
 #include "VLAD.h"
@@ -25,8 +26,13 @@ int main(int argc, char *argv[])
 	cv::Mat R;
 	cv::repeat(I, 5, 1, R);
 
+	cv::Mat_<int> Seq(1, 5);
+	std::iota(Seq.begin(), Seq.end(), 0);
+
 	cout << M << endl;
 	cout << endl;
 	cout << R << endl;
+	cout << endl;
+	cout << Seq << endl;
 	return 0;
 }

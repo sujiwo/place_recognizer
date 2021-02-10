@@ -8,6 +8,8 @@
 
 #include <vector>
 #include <algorithm>
+#include <numeric>
+#include <opencv2/core/persistence.hpp>
 #include "VLAD.h"
 
 
@@ -167,7 +169,8 @@ VisualDictionary::predict1row(const cv::Mat &descriptors, int rowNum) const
 
 VLAD::VLAD(uint numWords, uint _leafSize) :
 	vDict(numWords),
-	leafSize(_leafSize)
+	leafSize(_leafSize),
+	searchTree(cv::ml::KNearest::create())
 {}
 
 VLAD::~VLAD() {
@@ -186,6 +189,7 @@ VLAD::initTrain()
 {
 	trainDescriptors.clear();
 	trainDescriptorPtr.clear();
+	searchTree->clear();
 }
 
 void
@@ -225,6 +229,48 @@ VLAD::flatNormalDescriptors() const
 }
 
 
+std::vector<uint>
+VLAD::query(const cv::Mat &descriptors, const uint numToReturn) const
+{
+	VLADDescriptor queryDesc(descriptors, vDict);
+	auto vlad = queryDesc.flattened();
+
+	vector<uint> results;
+	auto resp = searchTree->predict(vlad, results);
+}
+
+
+bool
+VLAD::save(const std::string &path)
+{
+	try {
+		cv::FileStorage store(path, cv::FileStorage::Mode::WRITE);
+		searchTree->write(store);
+		store.write("cluster_centers", vDict.centers);
+		store.release();
+	} catch (exception &e) {
+		return false;
+	}
+
+	return true;
+}
+
+
+bool
+VLAD::load(const std::string &path)
+{
+	try {
+		cv::FileStorage store(path, cv::FileStorage::Mode::READ);
+		searchTree = cv::Algorithm::read<cv::ml::KNearest>(store.root());
+		vDict.setCenters(store["cluster_centers"].mat());
+	} catch (exception &e) {
+		return false;
+	}
+
+	return true;
+}
+
+
 void
 VLAD::stopTrain()
 {
@@ -248,7 +294,13 @@ VLAD::stopTrain()
 	}
 
 	auto D = flatNormalDescriptors();
-	// XXX: find KDTree solution
+	searchTree->setAlgorithmType(cv::ml::KNearest::Types::KDTREE);
+	searchTree->setIsClassifier(true);
+
+	cv::Mat_<int> responses(1, D.rows);
+	std::iota(responses.begin(), responses.end(), 0);
+
+	searchTree->train(D, cv::ml::ROW_SAMPLE, responses);
 }
 
 

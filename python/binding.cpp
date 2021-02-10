@@ -27,6 +27,9 @@ using namespace pybind11::literals;
 template <typename... Args>
 using overload_cast_ = pybind11::detail::overload_cast_impl<Args...>;
 
+using cVLAD=PlaceRecognizer::VLAD;
+using cVisDict=PlaceRecognizer::VisualDictionary;
+
 
 void module_init()
 {
@@ -157,11 +160,29 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 			.def("lastImageId", &xIBoW::lastImageId);
 		;
 
-	py::class_<PlaceRecognizer::VisualDictionary> (mod, "cVisualDictionary")
+	py::class_<cVisDict> (mod, "cVisualDictionary")
 		.def( py::init<>() )
-		.def("setCenters", &PlaceRecognizer::VisualDictionary::setCenters)
-		.def("getCenters", &PlaceRecognizer::VisualDictionary::getCenters)
-		.def("predict", &PlaceRecognizer::VisualDictionary::predict, "Doc" )
+		.def("setCenters", &cVisDict::setCenters)
+		.def("getCenters", &cVisDict::getCenters)
+		.def("predict", &cVisDict::predict, "Doc" )
+	;
+
+	py::class_<PlaceRecognizer::VLAD> (mod, "VLAD")
+		.def( py::init<>() )
+		.def( "initTrain", &cVLAD::initTrain,
+			"Initialize training session")
+		.def( "addImage", &cVLAD::addImage,
+			"descriptors"_a,
+			"keypoints"_a,
+			"placeId"_a=-1,
+			"Add new image descriptors from an image")
+		.def("stopTrain", &cVLAD::stopTrain,
+			"End a training session")
+		.def("query", &cVLAD::query, "descriptors"_a, "numOfImages"_a=5)
+
+		.def("save", &cVLAD::save, "save mapped images to disk file")
+		.def("load", &cVLAD::load, "Load a map file from disk file")
+
 	;
 
 }

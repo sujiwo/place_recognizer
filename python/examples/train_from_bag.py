@@ -55,7 +55,7 @@ def main():
     _parser.add_argument("topic", type=str)
     _parser.add_argument("output", type=str)
     _parser.add_argument("--dictionary", type=str, metavar="path", help="Path to initial visual dictionary (only for vlad)")
-    _parser.add_argument("--method", type=str, choices=['vlad', 'ibow'], default='vlad', help="Choices of method for training")
+    _parser.add_argument("--method", type=str, choices=['vlad', 'ibow', 'cvlad'], default='vlad', help="Choices of method for training")
     _parser.add_argument("--desample", type=float, metavar="hz", default=5.0, help="Reduce sample rate of images in bag file")
     _parser.add_argument("--resize", type=float, metavar="ratio", default=0.53333, help="Rescale image size with this ratio")
     _parser.add_argument("--load", type=str, metavar="path", default="", help="Load previous map for retrain")

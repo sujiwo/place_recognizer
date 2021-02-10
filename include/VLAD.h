@@ -11,6 +11,7 @@
 #include <vector>
 #include <map>
 #include <opencv2/core.hpp>
+#include <opencv2/ml.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/split_member.hpp>
 #include "IncrementalBoW.h"
@@ -92,7 +93,7 @@ public:
 
 	void stopTrain();
 
-	bool search(const cv::Mat &image_descriptors, std::vector<ImageMatch> &results) const;
+	std::vector<uint> query(const cv::Mat &descriptors, const uint numToReturn) const;
 
 	bool save(const std::string &path);
 	bool load(const std::string &path);
@@ -104,6 +105,7 @@ protected:
 	uint leafSize;
 	VisualDictionary vDict;
 	std::vector<uint> imageIds;
+	cv::Ptr<cv::ml::KNearest> searchTree;
 
 	// training data structures
 	std::vector<cv::Mat> trainDescriptors;
