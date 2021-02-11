@@ -46,7 +46,7 @@ class GenericTrainer(object):
     
     Parameters
     ----------
-    - method: str, "ibow" or "vlad"
+    - method: str, "ibow", "cvlad" or "vlad"
     - mapfile_output: str, path to resulting map file
     - mapfile_load: str, path to existing map file to be loaded
     - vdictionaryPath: str, path to visual dictionary (only for vlad)
@@ -85,6 +85,8 @@ class GenericTrainer(object):
                 self.mapper = VLAD2(vdict)
             elif method=="ibow":
                 self.mapper = IncrementalBoW()
+            elif method=="cvlad":
+                self.mapper = VLAD()
                 
         self.prepare()
         
@@ -192,7 +194,7 @@ class GenericTrainer(object):
             mapIo.seek(0)
             prtar.addfile(tarinfo=mapInfo, fileobj=mapIo)
             ibowMapTmpName = None
-        else:
+        elif self.method=='ibow' or self.method=='cvlad':
             # IncrementalBoW does not support saving to file descriptor
             randInt = str(randint(10000, 99999))
             ibowMapTmpName = os.path.join(os.path.dirname(os.path.realpath(filepath)), 'map'+randInt+'.int')
