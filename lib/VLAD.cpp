@@ -281,6 +281,15 @@ VLAD::initClusterCenters(const cv::Mat &cluster_centers)
 }
 
 
+cv::Mat createMatFromVectorMat(const std::vector<cv::Mat> &src)
+{
+	cv::Mat dst(src.size(), src[0].cols, src[0].type());
+	for (int r=0; r<src.size(); ++r)
+		src[r].copyTo(dst.row(r));
+	return dst;
+}
+
+
 void
 VLAD::stopTrain()
 {
@@ -288,7 +297,8 @@ VLAD::stopTrain()
 
 	cout << "Cluster center adaptation\n";
 	cv::Mat oldDict = vDict.centers.clone();
-	vDict.adapt(trainDescriptors);
+	auto hugeDescMat = createMatFromVectorMat(trainDescriptors);
+	vDict.adapt(hugeDescMat);
 
 	if (hasTrained) {
 		cout << "Adapting old VLAD descriptors to new centroids\n";
