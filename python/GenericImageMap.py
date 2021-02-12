@@ -245,12 +245,15 @@ class GenericTrainer(object):
             mapObj = VLAD2.load(mapIo)
         else:
             import tempfile
-            mapObj = IncrementalBoW()
+            if header['method']=='ibow':
+                mapObj = IncrementalBoW()
+            elif header['method']=='cvlad':
+                mapObj = VLAD()
             mapInfo.name = str(uuid.uuid4())
-            ibowMapTmpName = os.path.join(tempfile.gettempdir(), mapInfo.name)
+            mapTmpName = os.path.join(tempfile.gettempdir(), mapInfo.name)
             prtar.extract(mapInfo, path=tempfile.tempdir)
-            mapObj.load(ibowMapTmpName)
-            os.remove(ibowMapTmpName)
+            mapObj.load(mapTmpName)
+            os.remove(mapTmpName)
             pass
         
         metadataIo = prtar.extractfile(metadataInfo)    

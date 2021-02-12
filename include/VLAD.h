@@ -61,6 +61,11 @@ protected:
 
 struct VLADDescriptor
 {
+	typedef std::vector<int> Counters;
+
+	VLADDescriptor()
+	{}
+
 	VLADDescriptor(const std::vector<cv::Mat> imageDescriptors, const VisualDictionary &dict);
 
 	void compute(const cv::Mat &imageDescriptors, const VisualDictionary &dict);
@@ -73,7 +78,7 @@ struct VLADDescriptor
 
 	// The resulting aggregated (VLAD) descriptor, unnormalized
 	cv::Mat descriptors;
-	std::vector<uint> centroid_counters;
+	Counters centroid_counters;
 };
 
 

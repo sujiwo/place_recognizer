@@ -47,12 +47,7 @@ VLADDescriptor::compute(const cv::Mat &imageDescriptors, const VisualDictionary 
 		m = imageDescriptors.rows,
 		d = imageDescriptors.cols;
 	descriptors = cv::Mat::zeros(k, d, CV_32FC1);
-	centroid_counters = vector<uint>(k, 0);
-
-	if (imageDescriptors.type()==CV_32F)
-		cout << "F1\n";
-	if (centers.type()==CV_32F)
-		cout << "F2\n";
+	centroid_counters = Counters(k, 0);
 
 	for (auto r=0; r<imageDescriptors.rows; ++r) {
 		auto descRow = imageDescriptors.row(r);
@@ -261,6 +256,11 @@ VLAD::flatNormalDescriptors() const
 std::vector<uint>
 VLAD::query(const cv::Mat &descriptors, const uint numToReturn) const
 {
+	cv::Mat descFloat;
+	if (descriptors.type()!=CV_32F)
+		descriptors.convertTo(descFloat, CV_32F);
+	else descFloat = descriptors;
+
 	VLADDescriptor queryDesc(descriptors, vDict);
 	auto vlad = queryDesc.flattened();
 
@@ -276,6 +276,13 @@ VLAD::save(const std::string &path)
 		cv::FileStorage store(path, cv::FileStorage::Mode::WRITE);
 		searchTree->write(store);
 		store.write("cluster_centers", vDict.centers);
+
+		store << "num_descriptors" << int(vDescriptors.size());
+		for (auto &vd: vDescriptors) {
+			store << vd.descriptors;
+			store << vd.centroid_counters;
+		}
+
 		store.release();
 	} catch (exception &e) {
 		return false;
@@ -292,6 +299,17 @@ VLAD::load(const std::string &path)
 		cv::FileStorage store(path, cv::FileStorage::Mode::READ);
 		searchTree = cv::Algorithm::read<cv::ml::KNearest>(store.root());
 		vDict.setCenters(store["cluster_centers"].mat());
+
+		int numVladDescriptors;
+		store["num_descriptors"] >> numVladDescriptors;
+		vDescriptors.resize(numVladDescriptors);
+		for (int i=0; i<numVladDescriptors; ++i) {
+			VLADDescriptor vl;
+			store >> vl.descriptors;
+			store >> vl.centroid_counters;
+			vDescriptors[i] = vl;
+		}
+
 	} catch (exception &e) {
 		return false;
 	}
