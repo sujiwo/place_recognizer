@@ -86,10 +86,11 @@ class GenericTrainer(object):
             elif method=="ibow":
                 self.mapper = IncrementalBoW()
             elif method=="cvlad":
+                vdict = np.load(vdictionaryPath)
                 self.mapper = VLAD()
+                self.mapper.initClusterCenters(vdict)
                 
         self.prepare()
-        
         
         if (self.useEnhancement==True):
             self.enhanceMethod = useEnhancement

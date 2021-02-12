@@ -21,9 +21,9 @@ class BagTrainer(GenericTrainer):
         super(BagTrainer, self).__init__(method, mapfile_output, mapfile_load, vdictionaryPath, useEnhancement=enhanceMethods)
 
         # Inspect the bag file
-        self.trainBag, self.trajectoryBag = ImageBagWithPose.probeBagForImageAndTrajectory(bagFilePath, imageTopic)
+        self.trainBag, self.trajectoryBag = ImageBagWithPose.probeBagForImageAndTrajectory(bagfilePath, imageTopic)
         print("Using {} as image source".format(self.trainBag.topic()))
-        print("Using {} as trajectory source".format(bg.topic()))
+        print("Using {} as trajectory source".format(self.trajectoryBag.topic()))
         self.trajectorySrc = GeographicTrajectory(self.trajectoryBag)
                 
         self.sampleList = self.trainBag.desample(desample, True, bagStart, bagStop)

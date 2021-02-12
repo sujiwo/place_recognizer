@@ -157,7 +157,7 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 			.def_property_readonly("numImages", &xIBoW::numImages, "Number of images stored in database")
 			.def_property_readonly("numDescriptors", &xIBoW::numDescriptors, "Number of descriptors stored in database")
 
-			.def("lastImageId", &xIBoW::lastImageId);
+			.def("lastImageId", &xIBoW::lastImageId)
 		;
 
 	py::class_<cVisDict> (mod, "cVisualDictionary")
@@ -169,6 +169,8 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 
 	py::class_<PlaceRecognizer::VLAD> (mod, "VLAD")
 		.def( py::init<>() )
+		.def( "initClusterCenters", &cVLAD::initClusterCenters,
+			"Initialize dictionary's cluster centers using preloaded matrix")
 		.def( "initTrain", &cVLAD::initTrain,
 			"Initialize training session")
 		.def( "addImage", &cVLAD::addImage,
@@ -183,6 +185,7 @@ PYBIND11_MODULE(_place_recognizer, mod) {
 		.def("save", &cVLAD::save, "save mapped images to disk file")
 		.def("load", &cVLAD::load, "Load a map file from disk file")
 
+		.def("lastImageId", &cVLAD::lastImageId)
 	;
 
 }

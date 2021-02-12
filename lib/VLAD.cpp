@@ -193,9 +193,12 @@ VLAD::initTrain()
 }
 
 void
-VLAD::addImage(const std::vector<cv::KeyPoint> &keypoints, const cv::Mat &descriptors, uint imageId)
+VLAD::addImage(const cv::Mat &descriptors, const std::vector<cv::KeyPoint> &keypoints, uint imageId)
 {
 	imageIds.push_back(imageId);
+
+	cv::Mat descriptorsFloat;
+	descriptors.convertTo(descriptorsFloat, CV_32F);
 
 	auto curPtr = trainDescriptors.size();
 	trainDescriptorPtr.push_back(make_pair(curPtr, curPtr+descriptors.rows));
@@ -268,6 +271,13 @@ VLAD::load(const std::string &path)
 	}
 
 	return true;
+}
+
+
+void
+VLAD::initClusterCenters(const cv::Mat &cluster_centers)
+{
+	vDict.setCenters(cluster_centers);
 }
 
 

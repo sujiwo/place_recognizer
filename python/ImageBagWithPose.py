@@ -120,7 +120,7 @@ class ImageBagWithPose(ImageBag):
                 if imageTopic is None:
                     imageBag = ImageBag(bagFilePath, bg.topic())
                 elif bg.topic()==imageTopic:
-                    imageBag = ImageBag(bagfilePath, imageTopic)
+                    imageBag = ImageBag(bagFilePath, imageTopic)
             elif bg.type() in GeographicTrajectory.supportedMsgTypes:
                 trajectorySrc = bg
         if (not imageBag):

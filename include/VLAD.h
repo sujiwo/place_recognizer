@@ -89,7 +89,9 @@ public:
 
 	void initTrain();
 
-	void addImage(const std::vector<cv::KeyPoint> &keypoints, const cv::Mat &descriptors, uint imageId=-1);
+	void initClusterCenters(const cv::Mat &cluster_centers);
+
+	void addImage(const cv::Mat &descriptors, const std::vector<cv::KeyPoint> &keypoints, uint imageId=-1);
 
 	void stopTrain();
 
