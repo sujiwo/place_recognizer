@@ -19,6 +19,23 @@ using namespace std;
 namespace PlaceRecognizer {
 
 
+cv::Mat createMatFromVectorMat(const std::vector<cv::Mat> &src)
+{
+	cv::Mat dst(src.size(), src[0].cols, src[0].type());
+	for (int r=0; r<src.size(); ++r)
+		src[r].copyTo(dst.row(r));
+	return dst;
+}
+
+
+VLADDescriptor::VLADDescriptor(const std::vector<cv::Mat> imageDescriptors, const VisualDictionary &dict)
+{
+	auto M = createMatFromVectorMat(imageDescriptors);
+	compute(M, dict);
+}
+
+
+
 void
 VLADDescriptor::compute(const cv::Mat &imageDescriptors, const VisualDictionary &dict)
 {
@@ -31,6 +48,11 @@ VLADDescriptor::compute(const cv::Mat &imageDescriptors, const VisualDictionary 
 		d = imageDescriptors.cols;
 	descriptors = cv::Mat::zeros(k, d, CV_32FC1);
 	centroid_counters = vector<uint>(k, 0);
+
+	if (imageDescriptors.type()==CV_32F)
+		cout << "F1\n";
+	if (centers.type()==CV_32F)
+		cout << "F2\n";
 
 	for (auto r=0; r<imageDescriptors.rows; ++r) {
 		auto descRow = imageDescriptors.row(r);
@@ -131,12 +153,15 @@ VisualDictionary::adapt(cv::InputArray newDescriptors, bool dryRun)
 	for (int i=0; i<newDescMat.rows; ++i) {
 		auto c = descCenters[i];
 		descCount[c] += 1;
-		movingAverage.row(c) += newDescMat.row(i);
+		cv::Mat R;
+		newDescMat.row(i).convertTo(R, movingAverage.type());
+		movingAverage.row(c) += R;
 	}
 	for (int i=0; i<numWords; ++i) {
 		movingAverage.row(i) /= float(descCount[i]);
 	}
 
+	movingAverage.convertTo(movingAverage, centers.type());
 	movingAverage = (movingAverage + centers) / 2.0;
 	if (dryRun)
 		return movingAverage;
@@ -198,12 +223,13 @@ VLAD::addImage(const cv::Mat &descriptors, const std::vector<cv::KeyPoint> &keyp
 	imageIds.push_back(imageId);
 
 	cv::Mat descriptorsFloat;
+	// make sure to get 32-bit float
 	descriptors.convertTo(descriptorsFloat, CV_32F);
 
 	auto curPtr = trainDescriptors.size();
-	trainDescriptorPtr.push_back(make_pair(curPtr, curPtr+descriptors.rows));
-	for (uint r=0; r<descriptors.rows; r++) {
-		trainDescriptors.push_back(descriptors.row(r).clone());
+	trainDescriptorPtr.push_back(make_pair(curPtr, curPtr+descriptorsFloat.rows));
+	for (uint r=0; r<descriptorsFloat.rows; r++) {
+		trainDescriptors.push_back(descriptorsFloat.row(r).clone());
 	}
 }
 
@@ -278,15 +304,6 @@ void
 VLAD::initClusterCenters(const cv::Mat &cluster_centers)
 {
 	vDict.setCenters(cluster_centers);
-}
-
-
-cv::Mat createMatFromVectorMat(const std::vector<cv::Mat> &src)
-{
-	cv::Mat dst(src.size(), src[0].cols, src[0].type());
-	for (int r=0; r<src.size(); ++r)
-		src[r].copyTo(dst.row(r));
-	return dst;
 }
 
 

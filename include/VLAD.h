@@ -61,11 +61,7 @@ protected:
 
 struct VLADDescriptor
 {
-	VLADDescriptor(const cv::InputArray imageDescriptors, const VisualDictionary &dict)
-	{
-		auto M = imageDescriptors.getMat();
-		compute(M, dict);
-	}
+	VLADDescriptor(const std::vector<cv::Mat> imageDescriptors, const VisualDictionary &dict);
 
 	void compute(const cv::Mat &imageDescriptors, const VisualDictionary &dict);
 

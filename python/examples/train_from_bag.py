@@ -12,7 +12,7 @@ import sys
 from tqdm import tqdm
 from argparse import ArgumentParser, ArgumentError
 from copy import copy
-from place_recognizer import VisualDictionary, VLAD2, IncrementalBoW, GeographicTrajectory, GenericTrainer, ImageBagWithPose
+from place_recognizer import *
 from place_recognizer.GenericImageMap import getEnhancementMethods
 
 
