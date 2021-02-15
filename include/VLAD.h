@@ -122,7 +122,7 @@ public:
 
 	void stopTrain();
 
-	std::vector<uint> query(const cv::Mat &descriptors, const uint numToReturn) const;
+	std::vector<int> query(const cv::Mat &descriptors, const uint numToReturn) const;
 
 	bool save(const std::string &path);
 	bool load(const std::string &path);

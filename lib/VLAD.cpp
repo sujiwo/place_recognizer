@@ -274,7 +274,7 @@ VLAD::flatNormalDescriptors() const
 }
 
 
-std::vector<uint>
+std::vector<int>
 VLAD::query(const cv::Mat &descriptors, const uint numToReturn) const
 {
 	cv::Mat descFloat;
@@ -285,8 +285,10 @@ VLAD::query(const cv::Mat &descriptors, const uint numToReturn) const
 	VLADDescriptor queryDesc(descriptors, vDict);
 	auto vlad = queryDesc.flattened();
 
-	cv::Mat neighborsIdx;
+	cv::Mat_<int> neighborsIdx;
 	kdtree.findNearest(vlad, numToReturn, INT_MAX, neighborsIdx);
+
+	return neighborsIdx;
 }
 
 

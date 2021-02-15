@@ -2,6 +2,7 @@
 #include <random>
 #include <limits>
 #include <numeric>
+#include <vector>
 
 #include "opencv2/core.hpp"
 #include "VLAD.h"

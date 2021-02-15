@@ -68,7 +68,7 @@ public:
 		cImageId++;
 	}
 
-	std::vector<uint> query(cv::Mat &descriptors, const uint numToReturn)
+	std::vector<int> query(cv::Mat &descriptors, const uint numToReturn)
 	{
 		std::vector<std::vector<cv::DMatch>> descMatches;
 		bow.searchDescriptors(descriptors, descMatches, 2, 32);
@@ -85,9 +85,9 @@ public:
 
 		ret = {imageMatches.begin(), imageMatches.begin() + std::min(numToReturn, (const uint)imageMatches.size())};
 
-		std::vector<uint> imgIds;
+		std::vector<int> imgIds;
 		for (auto &r: ret) {
-			imgIds.push_back((uint)r.image_id);
+			imgIds.push_back((int)r.image_id);
 		}
 
 		return imgIds;
