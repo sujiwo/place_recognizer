@@ -54,6 +54,7 @@ add_library(
 	place_recognizer
 		lib/IncrementalBoW.cpp
 		lib/VLAD.cpp
+		lib/kdtree.cpp
 )
 target_link_libraries(
 	place_recognizer

@@ -273,15 +273,19 @@ bool
 VLAD::save(const std::string &path)
 {
 	try {
+		// https://docs.opencv.org/master/dd/d74/tutorial_file_input_output_with_xml_yml.html
 		cv::FileStorage store(path, cv::FileStorage::Mode::WRITE);
 		searchTree->write(store);
 		store.write("cluster_centers", vDict.centers);
 
 		store << "num_descriptors" << int(vDescriptors.size());
+/*
+		cv::FileNode vdnode = store["vlad_nodes"];
 		for (auto &vd: vDescriptors) {
-			store << vd.descriptors;
-			store << vd.centroid_counters;
+			vdnode << vd.descriptors;
+			vdnode << vd.centroid_counters;
 		}
+*/
 
 		store.release();
 	} catch (exception &e) {
@@ -303,12 +307,15 @@ VLAD::load(const std::string &path)
 		int numVladDescriptors;
 		store["num_descriptors"] >> numVladDescriptors;
 		vDescriptors.resize(numVladDescriptors);
+/*
+		cv::FileNode vdnode = store["vlad_nodes"];
 		for (int i=0; i<numVladDescriptors; ++i) {
 			VLADDescriptor vl;
-			store >> vl.descriptors;
-			store >> vl.centroid_counters;
+			vdnode >> vl.descriptors;
+			vdnode >> vl.centroid_counters;
 			vDescriptors[i] = vl;
 		}
+*/
 
 	} catch (exception &e) {
 		return false;

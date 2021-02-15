@@ -59,6 +59,12 @@ protected:
 };
 
 
+class KNearest
+{
+
+};
+
+
 struct VLADDescriptor
 {
 	typedef std::vector<int> Counters;
