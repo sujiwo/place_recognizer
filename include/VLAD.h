@@ -15,6 +15,7 @@
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/split_member.hpp>
 #include "IncrementalBoW.h"
+#include "kdtree.hpp"
 
 
 namespace PlaceRecognizer {
@@ -61,7 +62,10 @@ protected:
 
 class KNearest
 {
+public:
 
+protected:
+	cv::ml::KDTree tree;
 };
 
 
