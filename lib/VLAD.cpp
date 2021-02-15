@@ -54,6 +54,12 @@ cv::Mat createMatFromVectorMat(const std::vector<cv::Mat> &src)
 }
 
 
+VLADDescriptor::VLADDescriptor(const cv::Mat &imageDescriptors, const VisualDictionary &dict)
+{
+	compute(imageDescriptors, dict);
+}
+
+
 VLADDescriptor::VLADDescriptor(const std::vector<cv::Mat> imageDescriptors, const VisualDictionary &dict)
 {
 	auto M = createMatFromVectorMat(imageDescriptors);
@@ -282,10 +288,10 @@ VLAD::query(const cv::Mat &descriptors, const uint numToReturn) const
 		descriptors.convertTo(descFloat, CV_32F);
 	else descFloat = descriptors;
 
-	VLADDescriptor queryDesc(descriptors, vDict);
+	VLADDescriptor queryDesc(descFloat, vDict);
 	auto vlad = queryDesc.flattened();
 
-	cv::Mat_<int> neighborsIdx;
+	cv::Mat neighborsIdx;
 	kdtree.findNearest(vlad, numToReturn, INT_MAX, neighborsIdx);
 
 	return neighborsIdx;

@@ -85,6 +85,8 @@ struct VLADDescriptor
 	VLADDescriptor()
 	{}
 
+	VLADDescriptor(const cv::Mat &imageDescriptors, const VisualDictionary &dict);
+
 	VLADDescriptor(const std::vector<cv::Mat> imageDescriptors, const VisualDictionary &dict);
 
 	void compute(const cv::Mat &imageDescriptors, const VisualDictionary &dict);
