@@ -63,6 +63,15 @@ protected:
 class KNearest
 {
 public:
+	KNearest();
+
+	void save(std::ostream &f) const;
+
+	bool train(const cv::Mat &inp_vectors);
+
+	void predict(const cv::Mat &samples, std::vector<int> &results);
+
+	void load(std::istream &f);
 
 protected:
 	cv::ml::KDTree tree;
@@ -89,6 +98,13 @@ struct VLADDescriptor
 	// The resulting aggregated (VLAD) descriptor, unnormalized
 	cv::Mat descriptors;
 	Counters centroid_counters;
+
+	template<class Archive>
+	void serialize(Archive &ar, const unsigned int)
+	{
+		ar & descriptors;
+		ar & centroid_counters;
+	}
 };
 
 
@@ -118,15 +134,13 @@ protected:
 	uint leafSize;
 	VisualDictionary vDict;
 	std::vector<uint> imageIds;
-	cv::Ptr<cv::ml::KNearest> searchTree;
+	cv::ml::KDTree kdtree;
 
-	// training data structures
+	// training data structures. will be discarded after training
 	std::vector<cv::Mat> trainDescriptors;
 	std::vector<std::pair<uint,uint>> trainDescriptorPtr;
 
 	std::vector<VLADDescriptor> vDescriptors;
-
-	cv::Mat computeVlad(const cv::Mat &descriptors) const;
 
 	void rebuildVladDescriptors(const cv::Mat &oldDict);
 

@@ -10,10 +10,36 @@
 #include <algorithm>
 #include <numeric>
 #include <opencv2/core/persistence.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include "cvobj_serialization.h"
 #include "VLAD.h"
 
 
 using namespace std;
+
+
+namespace boost {
+namespace serialization {
+
+template<class Archive>
+void serialize(Archive &ar, cv::ml::KDTree::Node &node, const unsigned int version)
+{
+	ar & node.idx & node.left & node.right & node.boundary;
+}
+
+template<class Archive>
+void serialize(Archive &ar, cv::ml::KDTree &tree, const unsigned int version)
+{
+	ar & tree.nodes;
+	ar & tree.points;
+	ar & tree.labels;
+	ar & tree.maxDepth;
+	ar & tree.normType;
+}
+
+}
+}
 
 
 namespace PlaceRecognizer {
@@ -160,7 +186,10 @@ VisualDictionary::adapt(cv::InputArray newDescriptors, bool dryRun)
 	movingAverage = (movingAverage + centers) / 2.0;
 	if (dryRun)
 		return movingAverage;
-	else centers = movingAverage.clone();
+	else {
+		centers = movingAverage.clone();
+		return centers;
+	}
 }
 
 
@@ -189,19 +218,11 @@ VisualDictionary::predict1row(const cv::Mat &descriptors, int rowNum) const
 
 VLAD::VLAD(uint numWords, uint _leafSize) :
 	vDict(numWords),
-	leafSize(_leafSize),
-	searchTree(cv::ml::KNearest::create())
+	leafSize(_leafSize)
 {}
 
 VLAD::~VLAD() {
 	// TODO Auto-generated destructor stub
-}
-
-cv::Mat
-VLAD::computeVlad(const cv::Mat &descriptors) const
-{
-	auto predictedLabels = vDict.predict(descriptors);
-	// Unfinished
 }
 
 void
@@ -209,7 +230,7 @@ VLAD::initTrain()
 {
 	trainDescriptors.clear();
 	trainDescriptorPtr.clear();
-	searchTree->clear();
+	kdtree = cv::ml::KDTree();
 }
 
 void
@@ -264,30 +285,26 @@ VLAD::query(const cv::Mat &descriptors, const uint numToReturn) const
 	VLADDescriptor queryDesc(descriptors, vDict);
 	auto vlad = queryDesc.flattened();
 
-	vector<uint> results;
-	auto resp = searchTree->predict(vlad, results);
+	cv::Mat neighborsIdx;
+	kdtree.findNearest(vlad, numToReturn, INT_MAX, neighborsIdx);
 }
 
 
 bool
-VLAD::save(const std::string &path)
+VLAD::save(const std::string &f)
 {
 	try {
-		// https://docs.opencv.org/master/dd/d74/tutorial_file_input_output_with_xml_yml.html
-		cv::FileStorage store(path, cv::FileStorage::Mode::WRITE);
-		searchTree->write(store);
-		store.write("cluster_centers", vDict.centers);
+		fstream indexFileFd;
+		indexFileFd.open(f, fstream::out | fstream::trunc);
+		if (!indexFileFd.is_open())
+			throw runtime_error("Unable to create map file");
 
-		store << "num_descriptors" << int(vDescriptors.size());
-/*
-		cv::FileNode vdnode = store["vlad_nodes"];
-		for (auto &vd: vDescriptors) {
-			vdnode << vd.descriptors;
-			vdnode << vd.centroid_counters;
-		}
-*/
+		boost::archive::binary_oarchive vladfd(indexFileFd);
+		vladfd << vDict.centers;
+		vladfd << vDescriptors;
+		vladfd << kdtree;
 
-		store.release();
+		indexFileFd.close();
 	} catch (exception &e) {
 		return false;
 	}
@@ -297,31 +314,31 @@ VLAD::save(const std::string &path)
 
 
 bool
-VLAD::load(const std::string &path)
+VLAD::load(const std::string &f)
 {
 	try {
-		cv::FileStorage store(path, cv::FileStorage::Mode::READ);
-		searchTree = cv::Algorithm::read<cv::ml::KNearest>(store.root());
-		vDict.setCenters(store["cluster_centers"].mat());
+		fstream indexFileFd;
+		indexFileFd.open(f, fstream::in);
+		if (!indexFileFd.is_open())
+			throw runtime_error("Unable to create map file");
 
-		int numVladDescriptors;
-		store["num_descriptors"] >> numVladDescriptors;
-		vDescriptors.resize(numVladDescriptors);
-/*
-		cv::FileNode vdnode = store["vlad_nodes"];
-		for (int i=0; i<numVladDescriptors; ++i) {
-			VLADDescriptor vl;
-			vdnode >> vl.descriptors;
-			vdnode >> vl.centroid_counters;
-			vDescriptors[i] = vl;
-		}
-*/
+		boost::archive::binary_iarchive vladfd(indexFileFd);
+		vladfd >> vDict.centers;
+		vladfd >> vDescriptors;
+		vladfd >> kdtree;
 
+		indexFileFd.close();
 	} catch (exception &e) {
 		return false;
 	}
 
 	return true;
+}
+
+
+KNearest::KNearest()
+{
+
 }
 
 
@@ -356,13 +373,11 @@ VLAD::stopTrain()
 	}
 
 	auto D = flatNormalDescriptors();
-	searchTree->setAlgorithmType(cv::ml::KNearest::Types::KDTREE);
-	searchTree->setIsClassifier(true);
 
 	cv::Mat_<int> responses(1, D.rows);
 	std::iota(responses.begin(), responses.end(), 0);
 
-	searchTree->train(D, cv::ml::ROW_SAMPLE, responses);
+	kdtree.build(D);
 }
 
 
