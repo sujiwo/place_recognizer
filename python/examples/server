@@ -1,7 +1,0 @@
-#!/usr/bin/python
-
-from place_recognizer import *
-
-
-if __name__=='__main__' :
-    pass

@@ -73,7 +73,7 @@ install(
 		examples/cityscape_dict.py
 		examples/query_from_bag.py
 		examples/train_from_bag.py
-		examples/server
+		examples/server.py
 		examples/pose_from_utm.py
 		examples/train_from_ros.py
 	DESTINATION
