@@ -208,6 +208,7 @@ VisualDictionary::predict1row(const cv::Mat &descriptors, int rowNum) const
 		norms2[i] = cv::norm(centers.row(i) - descriptors.row(rowNum));
 	return min_element(norms2.begin(), norms2.end()) - norms2.begin();
 */
+	// This version is faster than above
 	cv::Mat tmp(numWords, descriptors.cols, CV_32F),
 		sum(numWords, 1, CV_32F);
 
@@ -341,12 +342,6 @@ VLAD::load(const std::string &f)
 	}
 
 	return true;
-}
-
-
-KNearest::KNearest()
-{
-
 }
 
 

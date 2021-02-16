@@ -22,6 +22,10 @@ namespace PlaceRecognizer {
 
 
 struct VisualDictionary
+/*
+ * Descriptor compression to clusters
+ * Note: also available in Python
+ */
 {
 	friend class VLAD;
 	friend struct VLADDescriptor;
@@ -38,11 +42,17 @@ struct VisualDictionary
 	bool build (cv::Mat &descriptors);
 
 	/*
-	 * Returns a list of centroids for a set of descriptors
+	 * Returns a list of centroids for a set of descriptors.
+	 *
+	 * @param imageDescriptors: features acquired from detector
+	 * Should be in float32
 	 */
 	std::vector<uint>
 	predict(const cv::Mat &imageDescriptors) const;
 
+	/*
+	 * Adjust cluster centers to new set of image descriptors
+	 */
 	cv::Mat
 	adapt(cv::InputArray newDescriptors, bool dryRun=false);
 
@@ -57,24 +67,6 @@ protected:
 	cv::Mat centers;
 
 	uint predict1row(const cv::Mat &descriptors, int rowNum) const;
-};
-
-
-class KNearest
-{
-public:
-	KNearest();
-
-	void save(std::ostream &f) const;
-
-	bool train(const cv::Mat &inp_vectors);
-
-	void predict(const cv::Mat &samples, std::vector<int> &results);
-
-	void load(std::istream &f);
-
-protected:
-	cv::ml::KDTree tree;
 };
 
 
@@ -124,8 +116,14 @@ public:
 
 	void stopTrain();
 
+	/*
+	 * Search images in database using descriptors
+	 */
 	std::vector<int> query(const cv::Mat &descriptors, const uint numToReturn) const;
 
+	/*
+	 * Save/load routine to disk
+	 */
 	bool save(const std::string &path);
 	bool load(const std::string &path);
 
