@@ -68,19 +68,6 @@ target_link_libraries(
 # Python extension
 add_subdirectory (python)
 
-#add_executable( recognizer_srv
-#	nodes/recognizer_srv.cpp )
-#target_link_libraries( recognizer_srv
-#	place_recognizer
-#	Boost::system
-#	Boost::program_options
-#	${catkin_LIBRARIES}
-#	${Caffe_LIBRARIES} )
-#target_include_directories(
-#	recognizer_srv
-#		PUBLIC
-#			${Caffe_INCLUDE_DIRS}
-#	)
 install(
 	TARGETS place_recognizer
 		LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -92,27 +79,3 @@ target_link_libraries(bkmeans_test
 	place_recognizer)
 
 
-#if(rosbag_viewer_FOUND)
-#	message(STATUS "rosbag_viewer found; will compile mapper executables")
-#	find_package(sensor_msgs REQUIRED)
-#	find_package(cv_bridge REQUIRED)
-#	find_package(image_transport REQUIRED)
-#	
-#	add_executable(ibow_mapper 
-#		nodes/ibow_mapper.cpp
-#		lib/ImageBag.cpp
-#	)
-#	target_include_directories(
-#		ibow_mapper 
-#			PUBLIC 
-#			${rosbag_viewer_INCLUDE_DIRS}
-#		)
-#	target_link_libraries(
-#		ibow_mapper
-#			place_recognizer
-#			random_access_bag
-#			${image_transport_LIBRARIES})
-#	install(
-#		TARGETS ibow_mapper
-#			RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-#endif()

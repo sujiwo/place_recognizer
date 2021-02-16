@@ -32,6 +32,7 @@ class PlaceRecognizerServer():
         rospy.init_node('place_recognizer_server')
         self.process = rospy.Service('place_recognizer', srv.place_recognizer, self.serve)
         print("Ready")
+        print("Method: {}".format(self.imagedb.method))
         rospy.spin()
     
     def serve(self, image_msg):
@@ -43,21 +44,6 @@ class PlaceRecognizerServer():
         return srv.place_recognizerResponse(pointList)
 
 
-def server_main():
-    _parser = ArgumentParser(description="ROS Place Recognition Service")
-    _parser.add_argument("mapfile", type=str)
-    
-    enhanceMethods = getEnhancementMethods()
-    if len(enhanceMethods)!=0:
-        _parser.add_argument("--ime", type=str, choices=enhanceMethods, help='Preprocess image with this method')
-    else:
-        print("Enhancement not available; install im_enhance if you want")
-
-    prog_arguments = _parser.parse_args()
-    rospy.init_node('place_recognizer_server')
-    server = rospy.Service('place_recognizer', srv.place_recognizer, server_run_place_recognizer)
-    print("Ready")
-    rospy.spin()
 
 
 if __name__=='__main__' :

@@ -11,7 +11,7 @@ This library only supports Python; however, all critical routines are written in
 ## Requirements
 
 - OpenCV (>= 3.2)
-- ROS Melodic (Noetic support is planned)
+- ROS Melodic (Noetic support is in works)
 - Python 2.7 or 3.8 (Python 3 support is currently broken)
 - pybind11_catkin
 - rosbag_viewer [URL?]
@@ -41,7 +41,7 @@ For command-line usage, three scripts are provided:
 - `cityscape_dict.py`
 - `server.py` (ROS service to recognize and image and returns latitude/longitude; currently broken)
 
-To learn how to use these scripts, execute with parameter `-h`.
+To learn how to use these scripts, execute them with parameter `-h`.
 
 ### Training
 
@@ -53,7 +53,7 @@ Training step prepares an initial vocabulary and a map file to perform localizat
 
 ### Query
 
-To do
+There are two ways for querying a prepared map; first is by using Python API. Second way is via ROS service.
 
 ### Python API
 

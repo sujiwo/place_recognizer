@@ -268,6 +268,7 @@ class GenericImageDatabase(GenericTrainer):
         self.useEnhancement = callable(enhanceMethod) and _hasEnhancement
         self.enhanceMethod = enhanceMethod
         self.mapper, self.imageMetadata, header = GenericImageDatabase.loadMap(mapfile_load)
+        self.method = header['method']
         self.prepare()
         
     def initTrain(self):
