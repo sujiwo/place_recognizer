@@ -12,10 +12,11 @@ This library only supports Python; however, all critical routines are written in
 
 - OpenCV (>= 3.2)
 - ROS Melodic (Noetic support is in works)
-- Python 2.7 or 3.8 (Python 3 support is currently broken)
+- Python 2.7 or 3.8 (Python 3 support is in works)
 - pybind11_catkin
 - rosbag_viewer [URL?]
 - tqdm
+- im_enhance (optional, URL: https://github.com/sujiwo/im_enhance)
 
 ## Installation
 
@@ -36,10 +37,9 @@ Add $CAFFE_SEGNET_DIR/python to your $PYTHONPATH and it will be detected automat
 
 For command-line usage, three scripts are provided:
 
-- `train_from_bag.py`
-
-- `cityscape_dict.py`
-- `server.py` (ROS service to recognize and image and returns latitude/longitude; currently broken)
+- `train_from_bag.py` (train/build map from ROS Bag files)
+- `cityscape_dict.py` (create initial visual vocabulary from Cityscape dataset)
+- `server.py` (ROS service to recognize and image and returns latitude/longitude)
 
 To learn how to use these scripts, execute them with parameter `-h`.
 
@@ -58,3 +58,5 @@ There are two ways for querying a prepared map; first is by using Python API. Se
 ### Python API
 
 To do next
+
+
