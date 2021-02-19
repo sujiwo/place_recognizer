@@ -105,7 +105,6 @@ class ImageBagWithPose(ImageBag):
             raise ValueError("Requested trajectory topic does not exist")
         return trajectoryTopics
         
-        return trajectoryTopics
     
     def desample(self, hz=-1, onlyMsgList=False, startTime=0.0, stopTime=-1):
         raise NotImplementedError("The image bag has already been desampled")

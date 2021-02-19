@@ -39,6 +39,7 @@ install(
 		GenericImageMap.py
 		MiscProcess.py
 		ImageBagWithPose.py
+		OxfordDataset.py
 	DESTINATION
 		${CATKIN_PACKAGE_PYTHON_DESTINATION} )
 
