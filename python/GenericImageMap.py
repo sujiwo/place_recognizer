@@ -140,11 +140,13 @@ class GenericTrainer(object):
         '''
         image_prep = self.preprocess(image)
         keypoints, descriptors = self.extractor.detectAndCompute(image_prep, self.mask)
-        
-        self.mapper.addImage(descriptors, keypoints, self.imageIdNext)
-        self.imageMetadata.append(imageMetadata)
-        self.imageIdNext += 1
-        self.drawImageFrame(image_prep, keypoints, descriptors)
+
+        # Skip bad images that do not have features (ex. blurred or over/under-exposed)        
+        if (len(keypoints)!=0):
+            self.mapper.addImage(descriptors, keypoints, self.imageIdNext)
+            self.imageMetadata.append(imageMetadata)
+            self.imageIdNext += 1
+            self.drawImageFrame(image_prep, keypoints, descriptors)
             
     def drawImageFrame(self, image_prep, keypoints, descriptors):
         if self.show_image_frame:
@@ -201,7 +203,7 @@ class GenericTrainer(object):
             ibowMapTmpName = os.path.join(os.path.dirname(os.path.realpath(filepath)), 'map'+randInt+'.int')
             self.mapper.save(ibowMapTmpName)
             prtar.add(ibowMapTmpName, arcname='map.dat')
-            print("IBoW map saved")
+            print(self.method+" map saved")
         
         metadataIo = BytesIO()
         metadataInfo = tarfile.TarInfo(name="metadata.dat")

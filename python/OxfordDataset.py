@@ -9,7 +9,9 @@ import cv2
 import numpy as np
 import csv
 import rospy
+from copy import copy
 from tf import transformations as tfx
+from bisect import bisect
 from .GeographicCoordinate import GeographicTrajectory
 
 
@@ -30,6 +32,7 @@ class OxfordDataset:
         self.datasetPath = path.abspath(datasetDir)
         _timestamps = np.loadtxt(path.join(self.datasetPath, 'stereo.timestamps'), dtype=np.int)
         _timestamps = _timestamps[0:_timestamps.shape[0]-1,0]
+        self.filetimes = copy(_timestamps)
         self.timestamps = [ rospy.Time(nsecs=t*1000) for t in _timestamps]
         self._loadGps()
         
@@ -50,7 +53,7 @@ class OxfordDataset:
              self.originCorrectionAltitude]
     
     def __len__(self):
-        return len(self.timestamps)
+        return len(self.filetimes)
     
     def loadGroundTruth(self, gtpath):
         gt_csv_path = path.join(gtpath, 'rtk', path.basename(self.datasetPath), 'rtk.csv')
@@ -101,9 +104,12 @@ class OxfordDataset:
         self.distortionLUT_center_y = np.fromfile(lutfd, dtype=np.double, count=(lutfdsize/2)/8)
         self.distortionLUT_center_x = self.distortionLUT_center_x.astype(np.float32).reshape((960,1280))
         self.distortionLUT_center_y = self.distortionLUT_center_y.astype(np.float32).reshape((960,1280))
+        
+    def _imageFileName(self, i):
+        return path.join(self.datasetPath, 'stereo', 'centre', str(self.filetimes[i])+'.png')
     
     def __getitem__(self, i):
-        imagePath = path.join(self.datasetPath, 'stereo', 'centre', str(self.timestamps[i])+'.png')
+        imagePath = self._imageFileName(i)
         img = cv2.imread(imagePath, cv2.IMREAD_GRAYSCALE)
         if self.raw==True:
             return img
@@ -120,3 +126,29 @@ class OxfordDataset:
             raise ValueError("Distortion coefficient has not been loaded")
         return cv2.remap(image, self.distortionLUT_center_x, self.distortionLUT_center_y, cv2.INTER_LINEAR)
 
+    def desample(self, hz):
+        lengthInSeconds = (self.timestamps[-1]-self.timestamps[0]).to_sec()
+        if hz >= len(self) / lengthInSeconds:
+            raise ValueError("Frequency must be lower than the original one")
+        
+        pointer = []
+        tInterval = 1.0 / float(hz)
+        td = 0.0
+        for twork in np.arange(td, td+lengthInSeconds, 1.0):
+            tMax = min(twork+1.0, td+lengthInSeconds)
+            tm = twork + tInterval
+            while tm < tMax:
+                curtime = self.timestamps[0] + rospy.Duration.from_sec(tm)
+                if curtime == self.timestamps[0]:
+                    idx = 0
+                else:
+                    idx = bisect(self.timestamps, curtime)
+                pointer.append(idx)
+                tm += tInterval
+        
+        return pointer
+
+        
+        
+        
+        
