@@ -9,18 +9,28 @@ import cv2
 import numpy as np
 import csv
 import rospy
+from tf import transformations as tfx
 from .GeographicCoordinate import GeographicTrajectory
 
 
 class OxfordDataset:
 
+    gps = None
+    rtk = None
     raw = False
     scale = 1.0
+    distortionLUT_center_x = None
+    distortionLUT_center_y = None
+    originCorrectionEasting = -620248.53
+    originCorrectionNorthing = -5734882.47
+    originCorrectionAltitude = 0
+
     
     def __init__(self, datasetDir):
         self.datasetPath = path.abspath(datasetDir)
-        self.timestamps = np.loadtxt(path.join(self.datasetPath, 'stereo.timestamps'), dtype=np.int)
-        self.timestamps = self.timestamps[0:self.timestamps.shape[0]-1,0]
+        _timestamps = np.loadtxt(path.join(self.datasetPath, 'stereo.timestamps'), dtype=np.int)
+        _timestamps = _timestamps[0:_timestamps.shape[0]-1,0]
+        self.timestamps = [ rospy.Time(nsecs=t*1000) for t in _timestamps]
         self._loadGps()
         
     def _loadGps(self):
@@ -30,17 +40,67 @@ class OxfordDataset:
             csvfd = csv.DictReader(fd, delimiter=',')
             for r in csvfd:
                 self.gps.timestamps.append(rospy.Time( nsecs=int(r['timestamp'])*1000 ))
-                self.gps.coordinates.append([ float(r['easting']), float(r['northing']), float(r['altitude']) ])
-        self.gps.coordinates = np.array(self.gps.coordinates)
+                self.gps.coordinates.append([ 
+                    float(r['easting']), 
+                    float(r['northing']), 
+                    float(r['altitude']) ])
+        self.gps.coordinates = np.array(self.gps.coordinates) + \
+            [self.originCorrectionEasting, 
+             self.originCorrectionNorthing, 
+             self.originCorrectionAltitude]
     
     def __len__(self):
         return len(self.timestamps)
     
     def loadGroundTruth(self, gtpath):
-        pass
+        gt_csv_path = path.join(gtpath, 'rtk', path.basename(self.datasetPath), 'rtk.csv')
+        self.rtk = GeographicTrajectory()
+        with open(gt_csv_path, 'r') as fd:
+            csvfd = csv.DictReader(fd, delimiter=',')
+            for r in csvfd:
+                self.rtk.timestamps.append(rospy.Time( nsecs=int(r['timestamp'])*1000 ))
+                q = tfx.quaternion_from_euler(float(r['roll']), float(r['pitch']), float(r['yaw']))
+                self.rtk.coordinates.append([ 
+                    float(r['easting']), 
+                    float(r['northing']), 
+                    float(r['altitude']),
+                    q[0], q[1], q[2], q[3] ])
+        self.rtk.coordinates = np.array(self.rtk.coordinates) + \
+            [self.originCorrectionEasting, 
+             self.originCorrectionNorthing, 
+             self.originCorrectionAltitude,
+             0,0,0,0]
+            
+        # Build image pose ground truths
+        self.trajectory = GeographicTrajectory()
+        self.trajectory.timestamps = self.timestamps
+        self.trajectory.coordinates = []
+        for t in self.timestamps:
+            if t < self.rtk.timestamps[0]:
+                self.trajectory.coordinates.append(self.rtk.coordinates[0])
+            elif t > self.rtk.timestamps[-1]:
+                self.trajectory.coordinates.append(self.rtk.coordinates[-1])
+            else:
+                p = self.rtk.positionAt(t)
+                self.trajectory.coordinates.append(p)
+        self.trajectory.coordinates = np.array(self.trajectory.coordinates)
+        
     
-    def loadDistortionModel(self, distModelPath):
-        pass
+    def loadDistortionModel(self, distModelDir):
+        """
+        Load distorsion coefficient file.
+        - distModelDir: str, path to distorsion correction directory, downloaded from Oxford Robotcar website
+        """
+        lutfd = open(path.join(distModelDir, 'stereo_narrow_left_distortion_lut.bin'), 'rb')
+        lutfd.seek(0, 2)
+        lutfdsize = lutfd.tell() 
+        if (lutfdsize % 8 != 0):
+            raise IOError("File size is incorrect")
+        lutfd.seek(0)
+        self.distortionLUT_center_x = np.fromfile(lutfd, dtype=np.double, count=(lutfdsize/2)/8)
+        self.distortionLUT_center_y = np.fromfile(lutfd, dtype=np.double, count=(lutfdsize/2)/8)
+        self.distortionLUT_center_x = self.distortionLUT_center_x.astype(np.float32).reshape((960,1280))
+        self.distortionLUT_center_y = self.distortionLUT_center_y.astype(np.float32).reshape((960,1280))
     
     def __getitem__(self, i):
         imagePath = path.join(self.datasetPath, 'stereo', 'centre', str(self.timestamps[i])+'.png')
@@ -50,7 +110,13 @@ class OxfordDataset:
         else:
             img = cv2.cvtColor(img, cv2.COLOR_BAYER_GB2RGB)
             img = cv2.resize(img, (0,0), None, fx=self.scale, fy=self.scale)
-            return img
+            if (self.distortionLUT_center_x is None):
+                return img
+            else:
+                return self.undistort(img)
         
-
+    def undistort(self, image):
+        if (self.distortionLUT_center_x is None):
+            raise ValueError("Distortion coefficient has not been loaded")
+        return cv2.remap(image, self.distortionLUT_center_x, self.distortionLUT_center_y, cv2.INTER_LINEAR)
 
