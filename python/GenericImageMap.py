@@ -43,6 +43,7 @@ class GenericTrainer(object):
     - show_image_frame: whether to show incoming image frame after preprocessed 
     - useEnhancement: bool, set to enable image enhancement
     - enhanceMethod: function to be called for performing image enhancement
+    - image_frame_stype: int, How to draw image frame; 1=Plain (default), 2=features 
     
     Parameters
     ----------
@@ -61,6 +62,8 @@ class GenericTrainer(object):
     resize_factor = 0.53333
     # Whether to show image frames
     show_image_frame = True
+    # How to draw image frame; 1=Plain, 2=features
+    image_frame_style = 1
     
     def __init__(self, method, mapfile_output=None, mapfile_load=None, vdictionaryPath=None, useEnhancement=False):
         """
@@ -119,6 +122,10 @@ class GenericTrainer(object):
         imgprep = cv2.resize(image, (0,0), None, fx=self.resize_factor, fy=self.resize_factor)
         imgprep = self.wb.balanceWhite(imgprep)
         
+        if self.initialMask is not None and imgprep.shape[0:2]!=self.initialMask.shape[0:2]:
+            self.initialMask = cv2.resize(self.initialMask, (imgprep.shape[1],imgprep.shape[0]))
+            print("Mask resized")
+        
         if self.useEnhancement==True:
             imgprep = self.enhanceMethod(imgprep)
         
@@ -127,6 +134,8 @@ class GenericTrainer(object):
                 print("Masks has incompatible shape")
             else:
                 self.mask = np.logical_and(self.initialMask, CreateMask(imgprep)).astype(np.uint8)
+        else:
+            self.mask = self.initialMask
         return imgprep
     
     def addImage(self, image, imageMetadata=None):
@@ -151,7 +160,11 @@ class GenericTrainer(object):
     def drawImageFrame(self, image_prep, keypoints, descriptors):
         if self.show_image_frame:
 #             image_withKp = cv2.drawKeypoints(image_prep, keypoints, None, (0,255,0))
-            cv2.imshow("Image", image_prep)
+            if self.image_frame_style==1:
+                cv2.imshow("Image", image_prep)
+            else:
+                frame = cv2.drawKeypoints(image_prep, keypoints, None)
+                cv2.imshow("Image", frame)
             cv2.waitKey(1)
 
     def initTrain(self):

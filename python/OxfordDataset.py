@@ -26,6 +26,7 @@ class OxfordDataset:
     originCorrectionEasting = -620248.53
     originCorrectionNorthing = -5734882.47
     originCorrectionAltitude = 0
+    trajectory = None
 
     
     def __init__(self, datasetDir):
@@ -95,7 +96,7 @@ class OxfordDataset:
     def loadDistortionModel(self, distModelDir):
         """
         Load distorsion coefficient file.
-        - distModelDir: str, path to distorsion correction directory, downloaded from Oxford Robotcar website
+        - distModelDir: str, path to distorsion correction directory, downloaded from Oxford Robotcar SDK website
         """
         lutfd = open(path.join(distModelDir, 'stereo_narrow_left_distortion_lut.bin'), 'rb')
         lutfd.seek(0, 2)
@@ -133,7 +134,9 @@ class OxfordDataset:
         return cv2.remap(image, self.distortionLUT_center_x, self.distortionLUT_center_y, cv2.INTER_LINEAR)
     
     def position(self, i):
-        return self.rtk.coordinates[i]
+        if (self.trajectory is None):
+            raise ValueError("Error: ground truth has not been loaded")
+        return self.trajectory.coordinates[i]
 
     def desample(self, hz):
         lengthInSeconds = (self.timestamps[-1]-self.timestamps[0]).to_sec()
