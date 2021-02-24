@@ -56,6 +56,9 @@ class OxfordDataset:
         return len(self.filetimes)
     
     def loadGroundTruth(self, gtpath):
+        """
+        Loads pre-computed ground truth derived from RTK-GPS in a directory, usually with base name 'ground_truth_rtk'
+        """
         gt_csv_path = path.join(gtpath, 'rtk', path.basename(self.datasetPath), 'rtk.csv')
         self.rtk = GeographicTrajectory()
         with open(gt_csv_path, 'r') as fd:
@@ -109,6 +112,9 @@ class OxfordDataset:
         return path.join(self.datasetPath, 'stereo', 'centre', str(self.filetimes[i])+'.png')
     
     def __getitem__(self, i):
+        """
+        Returns image at index position i
+        """
         imagePath = self._imageFileName(i)
         img = cv2.imread(imagePath, cv2.IMREAD_GRAYSCALE)
         if self.raw==True:
@@ -125,6 +131,9 @@ class OxfordDataset:
         if (self.distortionLUT_center_x is None):
             raise ValueError("Distortion coefficient has not been loaded")
         return cv2.remap(image, self.distortionLUT_center_x, self.distortionLUT_center_y, cv2.INTER_LINEAR)
+    
+    def position(self, i):
+        return self.rtk.coordinates[i]
 
     def desample(self, hz):
         lengthInSeconds = (self.timestamps[-1]-self.timestamps[0]).to_sec()
