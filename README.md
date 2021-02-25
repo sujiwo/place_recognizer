@@ -14,7 +14,7 @@ This library only supports Python; however, all critical routines are written in
 - ROS Melodic (Noetic support is in works)
 - Python 2.7 or 3.8 (Python 3 support is in works)
 - pybind11_catkin
-- rosbag_viewer [URL?]
+- rosbag_viewer [https://github.com/sujiwo/rosbag_viewer]
 - tqdm
 - im_enhance (optional, URL: https://github.com/sujiwo/im_enhance)
 

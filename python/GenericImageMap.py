@@ -279,6 +279,18 @@ class GenericTrainer(object):
         
 
 class GenericImageDatabase(GenericTrainer):
+    """
+    Generic Image Query Class
+    
+    Attributes
+    ----------
+    Equal to GenericTrainer
+    
+    Parameters
+    ----------
+    - mapfile_load: str, path to load map file to be loaded
+    - enhanceMethod: callable, function for image preprocessing
+    """
     def __init__(self, mapfile_load, enhanceMethod=None):
         self.useEnhancement = callable(enhanceMethod) and _hasEnhancement
         self.enhanceMethod = enhanceMethod

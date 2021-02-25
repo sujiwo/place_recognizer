@@ -1,0 +1,45 @@
+#How to Build Place Recognition Maps and Use Them
+
+Overview
+--------
+
+`place_recognizer` is a package and C++/Python library for building visual-based place database. It can also be integrated to your own projects; for example, as loop detection assistance in SLAM methods.
+
+This package implements two major methods of visual place recognition: Incremental Bag-of-Words (IBoW) and Vector of Locally Aggregated Descriptors (VLAD). Both methods allow multi-session map building.
+
+Building visual place database requires two ingredients; first is image stream itself, and second, per-frame image metadata. This image metadata will be returned upon query. An example of relevant image metadata is GPS coordinate, but you can supply other types metadata such as LIDAR scans.
+
+Installation
+------------
+
+1. Create a new ROS Workspace, and cd to that workspace's directory.
+
+2. Clone the required repositories inside the `src` directory of ROS workspace:
+
+   - rosbag_viewer
+   - im_enhance
+   - place_recognizer
+
+3. Run `catkin_make install`. 
+4. Before running any programs, update the environment variables from `install` directory by:
+<pre>
+source install/setup.bash
+</pre>
+
+##Examples
+Except stated otherwise, all examples in this file are written using Python syntax.
+
+###Creating Map File from ROS Bag
+
+The easiest way to create map file from ROS Bag files is by using script `train_from_bag.py` that must be run from bash command prompt. This script requires a ROS bag file that contains at least two data stream:
+
+- Image stream in either sensor_msgs/Image or sensor_msgs/CompressedImage
+
+- GNSS fix in either nmea_msgs/Sentence or sensor_msgs/NavSatFix
+
+
+
+###Creating Map File from Custom Data Sources
+
+
+###Loading and Querying Database

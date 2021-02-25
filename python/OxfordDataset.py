@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 """
-Python modules that contain class to process Oxford dataset like a sequence
+Python modules that contain class to treat Oxford dataset like a sequence
 """
 from os import path
 import sys
