@@ -1,4 +1,5 @@
-#How to Build Place Recognition Maps and Use Them
+How to Build Place Recognition Maps and Use Them
+===
 
 Overview
 --------
@@ -26,10 +27,10 @@ Installation
 source install/setup.bash
 </pre>
 
-##Examples
+## Examples
 Except stated otherwise, all examples in this file are written using Python syntax.
 
-###Creating Map File from ROS Bag
+### Creating Map File from ROS Bag
 
 The easiest way to create map file from ROS Bag files is by using script `train_from_bag.py` that must be run from bash command prompt. This script requires a ROS bag file that contains at least two data stream:
 
@@ -39,7 +40,7 @@ The easiest way to create map file from ROS Bag files is by using script `train_
 
 
 
-###Creating Map File from Custom Data Sources
+### Creating Map File from Custom Data Sources
 
 
-###Loading and Querying Database
+### Loading and Querying Database
