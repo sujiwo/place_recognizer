@@ -40,20 +40,48 @@ The easiest way to create map file from ROS Bag files is by using script `train_
 
 An example of script execution (from ROS workspace directory) to create a new map file and stored in `/tmp/result-map.dat` is as follows. The image topic in the bag file is /camera1/image_raw.
 
-<pre><code>
+```bash
 $ ./install/lib/place_recognizer/train_from_bag.py --method ibow /media/user/source.bag /camera1/image_raw /tmp/result-map.dat
-</code></pre>
+```
+
 
 For more information on script's parameters, call train_from_bag with `-h` parameter.
 
 ### Creating Map File from Custom Data Sources
 
+In principle, user must create GenericTrainer object that specifies compression and indexing methods, whether to load previous sessions and path for saving map file. Then this object must initialize mapping using initTrain() function, subsequently add more images and stop the mapping process by using stopTrain().
+
 ```python
 from place_recognizer import *
-mymap = GenericTrainer(method='ibow')
+import cv2
+import glob
+import numpy as np
+
+mymap = GenericTrainer(method='ibow', mapfile_output='/tmp/result-map.dat')
+mymap.initTrain()
+
+# We assume that images are located in files in same directory, while their positions 
+# are placed inside a CSV file.
+# You are responsible for determining image metadata that will be supplied and returning 
+# upon query
+imagePoses = np.loadtxt('/Datasource/coordinates.txt')
+
+i = 0
+for file in glob.glob('/Datasource/*.png'):
+    image = cv2.imread(file)
+    position = imagePoses[i, 0:3]
+    mymap.addImage(image, position)
+    
+mymap.stopTrain()
 ```
 
-
-
 ### Loading and Querying Database
+
+To query the database, first create the image database object. 
+
+```python
+mymap = GenericImageDatabase('/tmp/result-map.dat')
+qImage = cv2.imread('test-image.jpg')
+imagePosCandidates = mymap.query(qImage)
+```
 
