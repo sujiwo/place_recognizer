@@ -38,9 +38,17 @@ The easiest way to create map file from ROS Bag files is by using script `train_
 
 - GNSS fix in either nmea_msgs/Sentence or sensor_msgs/NavSatFix
 
+An example of script execution (from ROS workspace directory) to create a new map file and stored in `/tmp/result-map.dat` is as follows. The image topic in the bag file is /camera1/image_raw.
 
+<pre><code>
+$ ./install/lib/place_recognizer/train_from_bag.py --method ibow /media/user/source.bag /camera1/image_raw /tmp/result-map.dat
+</code></pre>
+
+For more information on script's parameters, call train_from_bag with `-h` parameter.
 
 ### Creating Map File from Custom Data Sources
 
+TODO
 
 ### Loading and Querying Database
+
