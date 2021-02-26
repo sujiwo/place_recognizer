@@ -48,7 +48,12 @@ For more information on script's parameters, call train_from_bag with `-h` param
 
 ### Creating Map File from Custom Data Sources
 
-TODO
+```python
+from place_recognizer import *
+mymap = GenericTrainer(method='ibow')
+```
+
+
 
 ### Loading and Querying Database
 
