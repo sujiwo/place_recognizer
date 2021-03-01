@@ -27,7 +27,7 @@ install(
 
 # Python modules w/ core classes 
 # XXX: Should use catkin_install_python, but ROS Noetic
-# mangle the installed files (not all) such that they are only
+# mangles the installed files (not all) such that they are only
 # `symlink' to source files but can't be imported
 install(
 	PROGRAMS
@@ -40,6 +40,7 @@ install(
 		MiscProcess.py
 		ImageBagWithPose.py
 		OxfordDataset.py
+		OxfordDatasetViewer.py
 	DESTINATION
 		${CATKIN_PACKAGE_PYTHON_DESTINATION} )
 

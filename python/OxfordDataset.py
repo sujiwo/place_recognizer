@@ -13,6 +13,7 @@ from copy import copy
 from tf import transformations as tfx
 from bisect import bisect
 from .GeographicCoordinate import GeographicTrajectory
+from .OxfordDatasetViewer import OxfordDatasetViewer
 
 
 class OxfordDataset:
@@ -160,7 +161,8 @@ class OxfordDataset:
         
         return pointer
 
-        
+    def view(self):
+        return OxfordDatasetViewer(self)
         
         
         

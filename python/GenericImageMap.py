@@ -44,6 +44,7 @@ class GenericTrainer(object):
     - useEnhancement: bool, set to enable image enhancement
     - enhanceMethod: function to be called for performing image enhancement
     - image_frame_stype: int, How to draw image frame; 1=Plain (default), 2=features 
+    - extractor: image feature detector
     
     Parameters
     ----------

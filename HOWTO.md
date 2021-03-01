@@ -44,8 +44,11 @@ An example of script execution (from ROS workspace directory) to create a new ma
 $ ./install/lib/place_recognizer/train_from_bag.py --method ibow /media/user/source.bag /camera1/image_raw /tmp/result-map.dat
 ```
 
-
 For more information on script's parameters, call train_from_bag with `-h` parameter.
+
+### Multi-session Mapping
+
+Previously-made map files from different times may be loaded using parameter `--load` to perform multi-session mapping; ie. Map file with image streams from different time. Please note that VLAD and IBoW map files are incompatible and can not be converted.
 
 ### Creating Map File from Custom Data Sources
 
