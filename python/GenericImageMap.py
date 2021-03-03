@@ -131,8 +131,8 @@ class GenericTrainer(object):
             imgprep = self.enhanceMethod(imgprep)
         
         if _hasSegment==True:
-            if (imgprep.shape[0:2]!=self.initialMask.shape[0:2]):
-                print("Masks has incompatible shape")
+            if (self.initialMask is None) or (imgprep.shape[0:2]!=self.initialMask.shape[0:2]):
+                self.mask = CreateMask(imgprep)
             else:
                 self.mask = np.logical_and(self.initialMask, CreateMask(imgprep)).astype(np.uint8)
         else:
