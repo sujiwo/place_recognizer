@@ -55,7 +55,12 @@ install(
 		examples/train_from_ros.py
 	DESTINATION
 		${CATKIN_PACKAGE_BIN_DESTINATION} )
-		
+install(
+	FILES
+		examples/cityscape-cluster-centers.dat.npy
+	DESTINATION
+		${CATKIN_PACKAGE_SHARE_DESTINATION} )
+
 		
 		
 		

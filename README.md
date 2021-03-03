@@ -16,6 +16,7 @@ This library only supports Python; however, all critical routines are written in
 - pybind11_catkin
 - rosbag_viewer [https://github.com/sujiwo/rosbag_viewer]
 - tqdm
+- ros-geodesy (http://wiki.ros.org/geodesy)
 - im_enhance (optional, URL: https://github.com/sujiwo/im_enhance)
 
 ## Installation
