@@ -80,6 +80,7 @@ class GenericTrainer(object):
         if (mapfile_load):
             print("Here loading: {}".format(mapfile_load))
             self.mapper, self.imageMetadata, header = GenericTrainer.loadMap(mapfile_load)
+            self.method = header['method']
         else:
             if method=="vlad":
                 try:
