@@ -1,4 +1,9 @@
 #!/usr/bin/env python2
+
+"""
+This module contains classes for creating, saving and loading map files
+"""
+
 import sys
 import cv2
 from .VLAD import *
@@ -13,6 +18,8 @@ from numpy.random import randint
 from place_recognizer._place_recognizer import IncrementalBoW
 from .Segmentation import _hasSegment, CreateMask
 from hgext.convert.common import mapfile
+from datetime import datetime
+
 
 try:
     import im_enhance as ime
@@ -43,12 +50,12 @@ class GenericTrainer(object):
     - show_image_frame: whether to show incoming image frame after preprocessed 
     - useEnhancement: bool, set to enable image enhancement
     - enhanceMethod: function to be called for performing image enhancement
-    - image_frame_stype: int, How to draw image frame; 1=Plain (default), 2=features 
+    - image_frame_stype: int, How to draw image frame; 1=Plain (default), 2=features
     - extractor: image feature detector
     
     Parameters
     ----------
-    - method: str, "ibow", "cvlad" or "vlad"
+    - method: str, "ibow", or "vlad"
     - mapfile_output: str, path to resulting map file
     - mapfile_load: str, path to existing map file to be loaded
     - vdictionaryPath: str, path to visual dictionary (only for vlad)
@@ -82,15 +89,9 @@ class GenericTrainer(object):
             self.mapper, self.imageMetadata, header = GenericTrainer.loadMap(mapfile_load)
             self.method = header['method']
         else:
-            if method=="vlad":
-                try:
-                    vdict = VisualDictionary.load(vdictionaryPath)
-                except:
-                    raise ValueError("Unable to load visual dictionary for VLAD method")
-                self.mapper = VLAD2(vdict)
-            elif method=="ibow":
+            if method=="ibow":
                 self.mapper = IncrementalBoW()
-            elif method=="cvlad":
+            elif method=="vlad":
                 vdict = np.load(vdictionaryPath)
                 self.mapper = VLAD()
                 self.mapper.initClusterCenters(vdict)
@@ -195,7 +196,8 @@ class GenericTrainer(object):
         header = {
                 'method': self.method,
                 'initialMask': self.initialMask,
-                'resize_factor': self.resize_factor
+                'resize_factor': self.resize_factor,
+                'creation_time': datetime.today()
             }
         headerIo = BytesIO()
         headerInfo = tarfile.TarInfo(name="header.dat")
@@ -204,21 +206,12 @@ class GenericTrainer(object):
         headerIo.seek(0)
         prtar.addfile(tarinfo=headerInfo, fileobj=headerIo)
         
-        if self.method=='vlad':
-            mapIo = BytesIO()
-            mapInfo = tarfile.TarInfo(name="map.dat")
-            self.mapper.save(mapIo)
-            mapInfo.size = int(mapIo.tell())
-            mapIo.seek(0)
-            prtar.addfile(tarinfo=mapInfo, fileobj=mapIo)
-            ibowMapTmpName = None
-        elif self.method=='ibow' or self.method=='cvlad':
-            # IncrementalBoW does not support saving to file descriptor
-            randInt = str(randint(10000, 99999))
-            ibowMapTmpName = os.path.join(os.path.dirname(os.path.realpath(filepath)), 'map'+randInt+'.int')
-            self.mapper.save(ibowMapTmpName)
-            prtar.add(ibowMapTmpName, arcname='map.dat')
-            print(self.method+" map saved")
+        # C++ library does not support saving to file descriptor
+        randInt = str(randint(10000, 99999))
+        ibowMapTmpName = os.path.join(os.path.dirname(os.path.realpath(filepath)), 'map'+randInt+'.int')
+        self.mapper.save(ibowMapTmpName)
+        prtar.add(ibowMapTmpName, arcname='map.dat')
+        print(self.method+" map saved")
         
         metadataIo = BytesIO()
         metadataInfo = tarfile.TarInfo(name="metadata.dat")
@@ -231,10 +224,6 @@ class GenericTrainer(object):
         if (ibowMapTmpName is not None):
             os.remove(ibowMapTmpName)
             
-    @staticmethod
-    def createTrainerFromMapfile(filepath):
-        pass
-        
     @staticmethod
     def loadMap(filepath):
         '''
@@ -257,21 +246,16 @@ class GenericTrainer(object):
         headerIo = prtar.extractfile(headerInfo)
         header = pickle.load(headerIo)
 
-        if (header['method']=='vlad'):
-            mapIo = prtar.extractfile(mapInfo)
-            mapObj = VLAD2.load(mapIo)
-        else:
-            import tempfile
-            if header['method']=='ibow':
-                mapObj = IncrementalBoW()
-            elif header['method']=='cvlad':
-                mapObj = VLAD()
-            mapInfo.name = str(uuid.uuid4())
-            mapTmpName = os.path.join(tempfile.gettempdir(), mapInfo.name)
-            prtar.extract(mapInfo, path=tempfile.tempdir)
-            mapObj.load(mapTmpName)
-            os.remove(mapTmpName)
-            pass
+        import tempfile
+        if header['method']=='ibow':
+            mapObj = IncrementalBoW()
+        elif header['method']=='vlad':
+            mapObj = VLAD()
+        mapInfo.name = str(uuid.uuid4())
+        mapTmpName = os.path.join(tempfile.gettempdir(), mapInfo.name)
+        prtar.extract(mapInfo, path=tempfile.tempdir)
+        mapObj.load(mapTmpName)
+        os.remove(mapTmpName)
         
         metadataIo = prtar.extractfile(metadataInfo)    
         metadata = pickle.load(metadataIo)
@@ -298,6 +282,8 @@ class GenericImageDatabase(GenericTrainer):
         self.enhanceMethod = enhanceMethod
         self.mapper, self.imageMetadata, header = GenericImageDatabase.loadMap(mapfile_load)
         self.method = header['method']
+        try: self.creation_time = header['creation_time']
+        except AttributeError: self.creation_time = datetime.today()
         self.prepare()
         
     def initTrain(self):
