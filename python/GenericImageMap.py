@@ -283,7 +283,7 @@ class GenericImageDatabase(GenericTrainer):
         self.mapper, self.imageMetadata, header = GenericImageDatabase.loadMap(mapfile_load)
         self.method = header['method']
         try: self.creation_time = header['creation_time']
-        except AttributeError: self.creation_time = datetime.today()
+        except KeyError: self.creation_time = datetime.today()
         self.prepare()
         
     def initTrain(self):
