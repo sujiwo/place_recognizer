@@ -144,7 +144,11 @@ class GeographicTrajectory:
             try:
                 m = pynmea2.parse(rawmsg.sentence)
                 coord = utm.fromLatLong(float(m.latitude), float(m.longitude), float(m.altitude))
-                parsedCoordinates.append([coord.easting, coord.northing, coord.altitude])
+                gcoord = [coord.easting, coord.northing, coord.altitude, 0, 0, 0, 0]
+                if i>1:
+                    quat = GeographicTrajectory.orientationFromPositionOnlyYaw(parsedCoordinates[-1], parsedCoordinates[-2])
+                    gcoord[3:7] = quat
+                parsedCoordinates.append(gcoord)
                 timestamps.append(rawmsg.header.stamp)
             except:
                 continue
